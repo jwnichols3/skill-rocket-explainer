@@ -117,3 +117,35 @@ export async function voicePicker(initial = {}, { preview = true } = {}) {
 }
 
 function cap(s) { return s[0].toUpperCase() + s.slice(1); }
+
+const OTHER = '__other__';
+
+/**
+ * A dropdown of known values plus "Other…", which reveals a text field. A current value that
+ * isn't in the list shows as Other with the value filled in, so nothing saved is lost.
+ * `none` adds a first, empty choice (e.g. "not mapped").
+ */
+export function selectWithOther({ id, label, options = [], value = '', none, placeholder = '', onChange }) {
+  const get = () => (select.value === OTHER ? input.value.trim() : select.value);
+  const input = h('input.mono', { type: 'text', placeholder, 'aria-label': `${label}, other value`, oninput: () => onChange?.(get()) });
+  const select = h('select', { id, 'aria-label': label, onchange() {
+    input.hidden = select.value !== OTHER;
+    if (!input.hidden) input.focus();
+    onChange?.(get());
+  } });
+  function show(v) {
+    const known = (none !== undefined && v === '') || [...select.options].some((o) => o.value === v && v !== OTHER);
+    select.value = known ? v : OTHER;
+    if (!known) input.value = v;
+    input.hidden = select.value !== OTHER;
+  }
+  function setOptions(opts, keep = get()) {
+    select.replaceChildren(
+      ...(none !== undefined ? [h('option', { value: '' }, none)] : []),
+      ...opts.map((o) => h('option', { value: o.value }, o.label ?? o.value)),
+      h('option', { value: OTHER }, 'Other…'));
+    show(keep);
+  }
+  setOptions(options, value);
+  return { el: h('div.select-other', select, input), setOptions, get value() { return get(); }, set value(v) { show(v); } };
+}

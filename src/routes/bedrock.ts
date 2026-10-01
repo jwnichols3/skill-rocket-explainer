@@ -3,6 +3,7 @@ import type { Router } from '../router.ts';
 import { HttpError } from '../router.ts';
 import { listAwsProfiles, listInferenceProfiles, suggestMapping, isCredentialsError } from '../providers/claude/bedrock.ts';
 import { bedrockAuthFix } from '../providers/claude/agent.ts';
+import { readCatalog, refreshCatalog } from '../models.ts';
 
 const REGION = /^[a-z]{2}(-[a-z]+)+-\d+$/;
 const PROFILE = /^[\w.+@-]+$/;
@@ -11,6 +12,11 @@ const PROFILE = /^[\w.+@-]+$/;
 export function bedrockRoutes(app: App, router: Router) {
   // Profile names and regions from ~/.aws/config and ~/.aws/credentials; never keys.
   router.get('/api/bedrock/profiles', async () => ({ profiles: await listAwsProfiles(), selected: app.settings().bedrock.profile ?? '' }));
+
+  // Models for Settings' dropdowns: built-in list, plus Bedrock's once refreshed (cached).
+  router.get('/api/models/available', () => readCatalog(app.paths.home));
+  // A POST: it calls AWS and rewrites the cache, so it sits behind the mutation guard.
+  router.post('/api/models/available/refresh', () => refreshCatalog(app.paths.home, app.settings()));
 
   router.get('/api/bedrock/inference-profiles', async ({ url }) => {
     const s = app.settings();

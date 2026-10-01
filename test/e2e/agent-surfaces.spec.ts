@@ -26,10 +26,10 @@ test('settings: add, reorder and remove models, and pick the default model and e
   await expect(page.getByLabel('Default model')).toHaveValue('claude-opus-5-5');
   await expect(page.getByLabel('Default effort')).toHaveValue('high');
 
+  // Ids are picked from the list; picking one names it.
   await panel.getByRole('button', { name: 'Add model' }).click();
-  await panel.getByLabel('Model id 3').fill('claude-haiku-4-5');
-  await panel.getByLabel('Model label 3').fill('Haiku 4.5');
-  await panel.getByLabel('Model label 3').blur();
+  await panel.getByLabel('Model id 3', { exact: true }).selectOption('claude-haiku-4-5');
+  await expect(panel.getByLabel('Model label 3')).toHaveValue('Haiku 4.5');
   await panel.getByRole('button', { name: 'Move Haiku 4.5 up' }).click();
   await page.getByLabel('Default model').selectOption('claude-haiku-4-5');
   await page.getByLabel('Default effort').selectOption('low');
@@ -49,6 +49,34 @@ test('settings: add, reorder and remove models, and pick the default model and e
   expect((await app.json('/api/settings')).settings.defaults.model).toBe('claude-opus-5-5');
 });
 
+test('settings: model ids not in the list are typed under Other, and Refresh list adds what Bedrock offers', async ({ page, app }) => {
+  discovery.foundationModels = async () => [{ id: 'anthropic.claude-mythos-6-v1:0', name: 'Claude Mythos 6' }];
+  await page.goto('/settings');
+  const panel = page.locator('.panel.models');
+  await expect(panel.getByText('built-in models. Refresh to add what Bedrock offers.')).toBeVisible();
+  await expect(panel.getByLabel('Model id 1', { exact: true }).locator('option[value="claude-mythos-6"]')).toHaveCount(0);
+
+  await panel.getByRole('button', { name: 'Refresh list' }).click();
+  await expect(panel.getByText(/models \(1 on Bedrock\) · updated/)).toBeVisible();
+  await panel.getByRole('button', { name: 'Add model' }).click();
+  await panel.getByLabel('Model id 3', { exact: true }).selectOption('claude-mythos-6');
+  await expect(panel.getByLabel('Model label 3')).toHaveValue('Mythos 6');
+
+  await panel.getByRole('button', { name: 'Add model' }).click();
+  await panel.getByLabel('Model id 4', { exact: true }).selectOption({ label: 'Other…' });
+  await panel.getByLabel('Model id 4, other value').fill('claude-custom-1');
+  await panel.getByLabel('Model label 4').fill('Custom');
+  await panel.getByRole('button', { name: 'Save models' }).click();
+  await expect.poll(async () => (await app.json('/api/settings')).settings.models.map((m: any) => m.id))
+    .toEqual(['claude-opus-5-5', 'claude-fable-5-1', 'claude-mythos-6', 'claude-custom-1']);
+
+  // After a reload, a saved id that isn't in the list still shows, as Other.
+  await page.reload();
+  await expect(panel.getByLabel('Model id 4', { exact: true })).toHaveValue('__other__');
+  await expect(panel.getByLabel('Model id 4, other value')).toHaveValue('claude-custom-1');
+  await app.json('/api/settings', { method: 'PUT', body: JSON.stringify({ models: [{ id: 'claude-opus-5-5', label: 'Opus 5.5' }, { id: 'claude-fable-5-1', label: 'Fable 5.1' }] }) });
+});
+
 test('settings: default agent surface, and Bedrock profile, region and discovered mapping', async ({ page, app }) => {
   await page.goto('/settings');
   await page.getByLabel('Default agent surface').selectOption('claude-bedrock');
@@ -57,10 +85,10 @@ test('settings: default agent surface, and Bedrock profile, region and discovere
   const panel = page.locator('.panel.agent-surfaces');
   await expect(page.getByLabel('AWS profile').locator('option')).toHaveText(['(default profile)', 'default · us-east-1', 'sandbox · us-west-2 · SSO']);
   await page.getByLabel('AWS profile').selectOption('sandbox');
-  await page.getByLabel('Region').fill('us-west-2');
+  await page.getByLabel('Region', { exact: true }).selectOption('us-west-2');
   await panel.getByRole('button', { name: 'Discover' }).click();
   await expect(panel.getByText(/Found 3 inference profiles \(2 Anthropic Claude\); filled 2 mappings/)).toBeVisible();
-  await expect(page.getByLabel('Inference profile for Opus 5.5')).toHaveValue('us.anthropic.claude-opus-5-5');
+  await expect(page.getByLabel('Inference profile for Opus 5.5', { exact: true })).toHaveValue('us.anthropic.claude-opus-5-5');
   await panel.getByRole('button', { name: 'Save Bedrock settings' }).click();
   await expect.poll(async () => (await app.json('/api/settings')).settings.bedrock).toEqual({
     profile: 'sandbox', region: 'us-west-2', models: { 'claude-opus-5-5': 'us.anthropic.claude-opus-5-5', 'claude-fable-5-1': 'us.anthropic.claude-fable-5-1' },

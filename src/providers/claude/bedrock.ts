@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { BedrockClient, ListInferenceProfilesCommand, type InferenceProfileType } from '@aws-sdk/client-bedrock';
+import { BedrockClient, ListFoundationModelsCommand, ListInferenceProfilesCommand, type InferenceProfileType } from '@aws-sdk/client-bedrock';
 import { fromIni } from '@aws-sdk/credential-providers';
 import type { Settings } from '../../settings.ts';
 import type { CheckDef } from '../../doctor.ts';
@@ -104,8 +104,16 @@ async function sdkInferenceProfiles(q: BedrockQuery): Promise<InferenceProfile[]
   return out;
 }
 
-/** Swappable for tests: the function that asks Bedrock for inference profiles. */
-export const discovery = { inferenceProfiles: sdkInferenceProfiles };
+export interface FoundationModel { id: string; name: string }
+
+/** Active Anthropic foundation models in the region. */
+async function sdkFoundationModels(q: BedrockQuery): Promise<FoundationModel[]> {
+  const r = await client(q).send(new ListFoundationModelsCommand({ byProvider: 'Anthropic' }), { abortSignal: AbortSignal.timeout(20_000) });
+  return (r.modelSummaries ?? []).filter((m) => m.modelLifecycle?.status !== 'LEGACY' && m.modelId).map((m) => ({ id: m.modelId!, name: m.modelName ?? m.modelId! }));
+}
+
+/** Swappable for tests: the functions that ask Bedrock. */
+export const discovery = { inferenceProfiles: sdkInferenceProfiles, foundationModels: sdkFoundationModels };
 
 /** Inference profiles for a profile/region, Anthropic Claude first. */
 export async function listInferenceProfiles(q: BedrockQuery): Promise<InferenceProfile[]> {
@@ -128,7 +136,7 @@ function geoPrefix(region: string): string {
 }
 
 /** `us.anthropic.claude-haiku-4-5-20251001-v1:0` -> `claude-haiku-4-5`. */
-const baseModel = (id: string) => id.replace(/^([a-z-]+\.)?anthropic\./, '').replace(/-v\d+(:\d+)?$/, '').replace(/-\d{8}$/, '');
+export const baseModel = (id: string) => id.replace(/^([a-z-]+\.)?anthropic\./, '').replace(/-v\d+(:\d+)?$/, '').replace(/-\d{8}$/, '');
 
 /**
  * Suggested inference profile per app model id: the same model (ignoring date/version

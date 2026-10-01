@@ -1,11 +1,10 @@
 import { h, toast } from '../dom.js';
 import { api } from '../api.js';
-import { getSettings } from '../components/pickers.js';
+import { getSettings, selectWithOther } from '../components/pickers.js';
 import { jobView } from '../components/job.js';
 
 export async function settingsView(root) {
   const [{ settings, available }, secrets] = await Promise.all([api('/api/settings'), api('/api/secrets')]);
-  const ttsDd = h('dd', settings.providers.tts);
   const TYPES = [['video', 'Video renderer'], ['deck', 'Deck renderer'], ['doc', 'Briefing doc renderer'], ['visual', 'Visual renderer']];
   const rendererPicker = (type, label) => {
     const select = h('select', {
@@ -21,29 +20,43 @@ export async function settingsView(root) {
     }, available.renderer.filter((r) => r.outputTypes.includes(type)).map((r) => h('option', { value: r.id, selected: r.id === settings.providers.renderer[type] }, r.label)));
     return [h('dt', h('label', { for: `${type}-renderer` }, label)), h('dd', select)];
   };
+  const surfaces = agentSurfacesPanel(settings, available);
+  // One section at a time; the tab lives in the URL hash so reloads and links land on it.
+  const sections = [
+    ['models', 'Models & agents', [surfaces.el, modelsPanel(settings, (models) => surfaces.setModels(models))]],
+    ['voices', 'Voices', [voiceProviders(settings, available.tts, secrets)]],
+    ['rendering', 'Rendering', [h('div.panel', h('h2', 'Renderers'), h('p.hint', 'Which renderer makes each output type.'), h('dl.kv', TYPES.map(([type, label]) => rendererPicker(type, label))))]],
+    ['about', 'About', [versionPanel()]],
+  ];
+  const tabs = {};
+  const panels = {};
+  const show = (id, { remember = true } = {}) => {
+    if (!panels[id]) id = sections[0][0];
+    for (const [k] of sections) {
+      tabs[k].setAttribute('aria-selected', String(k === id));
+      panels[k].hidden = k !== id;
+    }
+    if (remember && location.hash.slice(1) !== id) history.replaceState(history.state, '', `#${id}`);
+  };
+  const bar = h('div.tabs', { role: 'tablist', 'aria-label': 'Settings sections' }, sections.map(([id, label]) =>
+    (tabs[id] = h('button', { type: 'button', role: 'tab', id: `tab-${id}`, 'aria-controls': `section-${id}`, onclick: () => show(id) }, label))));
   root.append(h('section.page',
     h('header.page-head', h('h1', 'Settings'), h('div.actions', h('a.btn', { href: '/setup', 'data-link': true }, 'Setup'), h('a.btn', { href: '/diagnostics', 'data-link': true }, 'Diagnostics'))),
-    h('div.panel',
-      h('h2', 'Providers'),
-      h('dl.kv',
-        h('dt', 'Agent surface'), h('dd', settings.providers.agent),
-        h('dt', 'Voice provider'), ttsDd,
-        TYPES.map(([type, label]) => rendererPicker(type, label)))),
-    voiceProviders(settings, available.tts, secrets, (id) => { ttsDd.textContent = id; })));
-  const surfaces = agentSurfacesPanel(settings, available);
-  root.lastElementChild.append(surfaces.el, modelsPanel(settings, (models) => surfaces.setModels(models)), versionPanel());
+    bar,
+    sections.map(([id, , content]) => (panels[id] = h('div.stack', { role: 'tabpanel', id: `section-${id}`, 'aria-labelledby': `tab-${id}` }, content)))));
+  // Plain /settings stays plain until a tab is picked.
+  show(location.hash.slice(1), { remember: !!location.hash });
 }
 
 const SECRET_LABELS = { apiKey: 'API key' };
 
 /** Default TTS provider, plus a write-only field for each secret a provider declares. */
-function voiceProviders(settings, providers, secrets, onDefault) {
+function voiceProviders(settings, providers, secrets) {
   const select = h('select', { id: 'default-tts' }, providers.map((p) => h('option', { value: p.id, selected: p.id === settings.providers.tts }, p.label)));
   select.addEventListener('change', async () => {
     try {
       await api('/api/settings', { method: 'PUT', body: { providers: { tts: select.value } } });
       await getSettings(true);
-      onDefault(select.value);
       toast('Default voice provider saved');
     } catch (err) { toast(err.message, 'error'); }
   });
@@ -98,6 +111,11 @@ async function saveSettings(body, ok) {
   }
 }
 
+// Regions where Bedrock runs Anthropic models; "Other…" covers any added later.
+const BEDROCK_REGIONS = ['us-east-1', 'us-east-2', 'us-west-2', 'us-gov-west-1', 'ca-central-1', 'sa-east-1',
+  'eu-central-1', 'eu-central-2', 'eu-west-1', 'eu-west-2', 'eu-west-3', 'eu-north-1', 'eu-south-1', 'eu-south-2',
+  'ap-northeast-1', 'ap-northeast-2', 'ap-northeast-3', 'ap-south-1', 'ap-south-2', 'ap-southeast-1', 'ap-southeast-2'];
+
 /** Default agent surface, and the Bedrock surface's AWS profile, region and model -> inference profile mapping. */
 function agentSurfacesPanel(settings, available) {
   const surface = h('select', { id: 'default-surface', onchange: () => saveSettings({ providers: { agent: surface.value } }, `Default agent surface: ${surface.selectedOptions[0].textContent}`) },
@@ -112,9 +130,10 @@ function agentSurfacesPanel(settings, available) {
   };
   setProfiles([]);
   api('/api/bedrock/profiles').then((r) => setProfiles(r.profiles), (err) => toast(`AWS profiles: ${err.message}`, 'error'));
-  const region = h('input', { id: 'bedrock-region', value: b.region, placeholder: 'us-east-1' });
+  const region = selectWithOther({ id: 'bedrock-region', label: 'Region', options: BEDROCK_REGIONS.map((r) => ({ value: r })), value: b.region, placeholder: 'us-east-1' });
 
-  const list = h('datalist', { id: 'bedrock-inference-profiles' });
+  // Until Discover runs, the choices are the saved mappings; afterwards, what Bedrock offers.
+  let profileOptions = [...new Set(Object.values(b.models).filter(Boolean))].map((v) => ({ value: v }));
   const status = h('div.hint', 'Discover lists the inference profiles this AWS profile can use in the region, Anthropic Claude first.');
   const inputs = new Map();
   const mapping = h('tbody');
@@ -122,9 +141,9 @@ function agentSurfacesPanel(settings, available) {
     const typed = Object.fromEntries([...inputs].map(([id, i]) => [id, i.value]));
     inputs.clear();
     mapping.replaceChildren(...models.map((m) => {
-      const input = h('input', { list: 'bedrock-inference-profiles', value: typed[m.id] ?? b.models[m.id] ?? '', placeholder: 'not mapped', class: 'mono', 'aria-label': `Inference profile for ${m.label || m.id}` });
-      inputs.set(m.id, input);
-      return h('tr', h('td', m.label || m.id, h('div.small.muted.mono', m.id)), h('td', input));
+      const picker = selectWithOther({ label: `Inference profile for ${m.label || m.id}`, options: profileOptions, value: typed[m.id] ?? b.models[m.id] ?? '', none: 'not mapped', placeholder: 'inference profile id or ARN' });
+      inputs.set(m.id, picker);
+      return h('tr', h('td', m.label || m.id, h('div.small.muted.mono', m.id)), h('td', picker.el));
     }));
   };
   setModels(settings.models);
@@ -133,8 +152,9 @@ function agentSurfacesPanel(settings, available) {
     discover.disabled = true;
     status.textContent = 'Asking Bedrock…';
     try {
-      const r = await api(`/api/bedrock/inference-profiles?profile=${encodeURIComponent(profile.value)}&region=${encodeURIComponent(region.value.trim())}`);
-      list.replaceChildren(...r.inferenceProfiles.map((p) => h('option', { value: p.id }, p.name)));
+      const r = await api(`/api/bedrock/inference-profiles?profile=${encodeURIComponent(profile.value)}&region=${encodeURIComponent(region.value)}`);
+      profileOptions = r.inferenceProfiles.map((p) => ({ value: p.id, label: `${p.name} · ${p.id}` }));
+      for (const picker of inputs.values()) picker.setOptions(profileOptions);
       let filled = 0;
       for (const [id, input] of inputs) if (!input.value && r.suggested[id]) { input.value = r.suggested[id]; filled++; }
       status.textContent = `Found ${r.inferenceProfiles.length} inference profiles (${r.inferenceProfiles.filter((p) => p.anthropic).length} Anthropic Claude)${filled ? `; filled ${filled} mapping${filled === 1 ? '' : 's'}, save to keep them` : ''}.`;
@@ -144,8 +164,8 @@ function agentSurfacesPanel(settings, available) {
     } finally { discover.disabled = false; }
   } }, 'Discover');
   const save = h('button.btn.small.primary', { type: 'button', async onclick() {
-    const models = Object.fromEntries([...inputs].map(([id, i]) => [id, i.value.trim()]));
-    const next = await saveSettings({ bedrock: { profile: profile.value, region: region.value.trim(), models } }, 'Bedrock settings saved');
+    const models = Object.fromEntries([...inputs].map(([id, i]) => [id, i.value]));
+    const next = await saveSettings({ bedrock: { profile: profile.value, region: region.value, models } }, 'Bedrock settings saved');
     if (next) Object.assign(b, next.bedrock);
   } }, 'Save Bedrock settings');
 
@@ -156,9 +176,8 @@ function agentSurfacesPanel(settings, available) {
     h('h3', 'Amazon Bedrock'),
     h('div.row', { style: { alignItems: 'flex-start' } },
       h('div.field', { style: { flex: 2 } }, h('label', { for: 'bedrock-profile' }, 'AWS profile'), profile),
-      h('div.field', { style: { flex: 1 } }, h('label', { for: 'bedrock-region' }, 'Region'), region)),
+      h('div.field', { style: { flex: 1 } }, h('label', { for: 'bedrock-region' }, 'Region'), region.el)),
     h('table.table', h('thead', h('tr', h('th', 'Model'), h('th', 'Inference profile'))), mapping),
-    list,
     h('div.row', { style: { marginTop: '10px' } }, discover, save),
     status);
   return { el, setModels };
@@ -177,8 +196,32 @@ function modelsPanel(settings, onSaved) {
     if (!named.some((r) => r.id === chosen)) chosen = named[0]?.id ?? '';
     defModel.replaceChildren(...named.map((r) => h('option', { value: r.id, selected: r.id === chosen }, r.label || r.id)));
   };
+  // Choices for the id column: the available-models catalog (built-in, plus Bedrock once refreshed).
+  let catalog = [];
+  const catalogStatus = h('span.hint', { 'aria-live': 'polite' });
+  const idPickers = [];
+  const idOptions = () => catalog.map((m) => ({ value: m.id, label: `${m.label} · ${m.id}` }));
+  const showCatalog = (c) => {
+    catalog = c.models;
+    for (const p of idPickers) p.setOptions(idOptions());
+    const fromBedrock = c.models.filter((m) => m.sources.includes('bedrock')).length;
+    catalogStatus.replaceChildren(c.fetchedAt
+      ? `${c.models.length} models (${fromBedrock} on Bedrock) · updated ${new Date(c.fetchedAt).toLocaleString()}`
+      : `${c.models.length} built-in models. Refresh to add what Bedrock offers.`,
+    ...c.problems.map((p) => h('div.callout.warn.small', p.message)));
+  };
+  api('/api/models/available').then(showCatalog, (err) => toast(`Models: ${err.message}`, 'error'));
+  const refreshList = h('button.btn.small', { type: 'button', async onclick() {
+    refreshList.disabled = true;
+    catalogStatus.textContent = 'Refreshing…';
+    try { showCatalog(await api('/api/models/available/refresh', { method: 'POST', body: {} })); }
+    catch (err) { catalogStatus.textContent = ''; toast(err.message, 'error'); }
+    finally { refreshList.disabled = false; }
+  } }, 'Refresh list');
+
   const move = (i, d) => { [rows[i], rows[i + d]] = [rows[i + d], rows[i]]; render(); };
   function render() {
+    idPickers.length = 0;
     body.replaceChildren(...rows.map((r, i) => {
       const up = h('button.btn.ghost.small', { type: 'button', disabled: i === 0, onclick: () => move(i, -1) }, '↑');
       const down = h('button.btn.ghost.small', { type: 'button', disabled: i === rows.length - 1, onclick: () => move(i, 1) }, '↓');
@@ -190,16 +233,27 @@ function modelsPanel(settings, onSaved) {
         remove.setAttribute('aria-label', `Remove ${n}`);
       };
       name();
+      const labelInput = h('input', { value: r.label, placeholder: 'Label', 'aria-label': `Model label ${i + 1}`, oninput: (e) => { r.label = e.target.value; name(); }, onchange: refreshDefault });
+      const idPicker = selectWithOther({ label: `Model id ${i + 1}`, options: idOptions(), value: r.id, none: r.id ? undefined : 'Choose a model…', placeholder: 'claude-…', onChange(v) {
+        // Picking a listed model names it, unless the label was typed by hand.
+        const known = catalog.find((m) => m.id === v);
+        const before = catalog.find((m) => m.id === r.id);
+        if (known && (!r.label.trim() || r.label === before?.label)) { r.label = known.label; labelInput.value = known.label; }
+        r.id = v;
+        name();
+        refreshDefault();
+      } });
+      idPickers.push(idPicker);
       return h('tr.model-row',
-        h('td', h('input', { value: r.id, placeholder: 'claude-…', class: 'mono', 'aria-label': `Model id ${i + 1}`, oninput: (e) => { r.id = e.target.value.trim(); name(); }, onchange: refreshDefault })),
-        h('td', h('input', { value: r.label, placeholder: 'Label', 'aria-label': `Model label ${i + 1}`, oninput: (e) => { r.label = e.target.value; name(); }, onchange: refreshDefault })),
+        h('td', idPicker.el),
+        h('td', labelInput),
         h('td', { style: { whiteSpace: 'nowrap' } }, up, down, remove));
     }));
     refreshDefault();
   }
   render();
 
-  const add = h('button.btn.small', { type: 'button', onclick: () => { rows.push({ id: '', label: '' }); render(); body.lastElementChild?.querySelector('input')?.focus(); } }, 'Add model');
+  const add = h('button.btn.small', { type: 'button', onclick: () => { rows.push({ id: '', label: '' }); render(); body.lastElementChild?.querySelector('select')?.focus(); } }, 'Add model');
   const save = h('button.btn.small.primary', { type: 'button', async onclick() {
     const models = rows.filter((r) => r.id).map((r) => ({ id: r.id, label: r.label.trim() || r.id }));
     const next = await saveSettings({ models, defaults: { model: defModel.value, effort: defEffort.value } }, 'Models saved');
@@ -208,6 +262,7 @@ function modelsPanel(settings, onSaved) {
 
   return h('div.panel.models',
     h('h2', 'Models'),
+    h('div.row', { style: { alignItems: 'center', marginBottom: '8px' } }, refreshList, catalogStatus),
     h('table.table', h('thead', h('tr', h('th', 'Model id'), h('th', 'Label'), h('th', h('span.sr', 'Actions')))), body),
     h('div.row', { style: { marginTop: '10px' } }, add),
     h('div.row', { style: { alignItems: 'flex-start', marginTop: '12px' } },

@@ -11,7 +11,7 @@ test('settings: check for update offers a newer release, installs it and offers 
     error: null, result: { installed: '9.0.0', restart: true }, createdAt: new Date().toISOString(), startedAt: new Date().toISOString(), endedAt: new Date().toISOString(),
   })));
 
-  await page.goto('/settings');
+  await page.goto('/settings#about');
   const panel = page.locator('.panel.version');
   await expect(panel.locator('#installed-version')).toHaveText(`v${version}`);
   await panel.getByRole('button', { name: 'Check for update' }).click();
@@ -26,7 +26,7 @@ test('settings: check for update offers a newer release, installs it and offers 
 test('settings: check for update says when up to date, and when releases are not visible', async ({ page }) => {
   let answer: unknown = { current: '1.10.0', latest: '1.10.0', tag: 'v1.10.0', newer: false };
   await page.route('**/api/update', (r) => r.fulfill(json(answer)));
-  await page.goto('/settings');
+  await page.goto('/settings#about');
   const panel = page.locator('.panel.version');
   const check = panel.getByRole('button', { name: 'Check for update' });
   await check.click();

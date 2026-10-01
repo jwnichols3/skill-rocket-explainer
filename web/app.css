@@ -198,7 +198,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 pre.doc { white-space: pre-wrap; background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; max-height: 420px; overflow: auto; color: #cfd5e3; }
 details > summary { cursor: pointer; color: var(--muted); }
 details[open] > summary { margin-bottom: 8px; }
-.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
 .tabs button { background: none; border: 0; color: var(--muted); padding: 8px 14px; font: 500 14px var(--font); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .tabs button[aria-selected=true] { color: var(--text); border-bottom-color: var(--accent); }
 .steps { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -279,3 +279,12 @@ details[open] > summary { margin-bottom: 8px; }
 .checks { display: flex; flex-direction: column; gap: 10px; }
 .check { display: flex; gap: 10px; align-items: flex-start; }
 .check .fix { margin-top: 2px; }
+.select-other { display: flex; gap: 6px; }
+.select-other > * { flex: 1; min-width: 0; }
+.select-other > [hidden] { display: none; }
+/* Phone width: the wordmark gives way so the nav fits without sideways scrolling. */
+@media (max-width: 600px) {
+  .topbar { gap: 8px; padding: 10px 16px; }
+  .brand span { display: none; }
+  .topnav a { padding: 6px 9px; }
+}

@@ -5,7 +5,7 @@ import { test, expect } from './fixtures.ts';
 const KEY = 'sk_e2e_not_a_real_key_1234567890';
 
 test('an ElevenLabs API key can be saved and cleared on Settings without ever being shown', async ({ page, app }) => {
-  await page.goto('/settings');
+  await page.goto('/settings#voices');
   const panel = page.locator('.voice-providers');
   await expect(panel.getByRole('heading', { name: 'Voice providers' })).toBeVisible();
   const field = panel.locator('.field.secret[data-provider="elevenlabs"]');
@@ -33,12 +33,12 @@ test('an ElevenLabs API key can be saved and cleared on Settings without ever be
 });
 
 test('the default voice provider is chosen on Settings and persists', async ({ page }) => {
-  await page.goto('/settings');
+  await page.goto('/settings#voices');
   const select = page.getByLabel('Default voice provider');
   await expect(select).toHaveValue('fake');
   await expect(select.locator('option')).toContainText(['Fake TTS (tests)', 'Amazon Polly', 'ElevenLabs']);
   await select.selectOption('elevenlabs');
-  await expect(page.locator('dl.kv dd').nth(1)).toHaveText('elevenlabs');
+  await expect.poll(async () => (await page.request.get('/api/settings').then((r) => r.json())).settings.providers.tts).toBe('elevenlabs');
   await page.reload();
   await expect(page.getByLabel('Default voice provider')).toHaveValue('elevenlabs');
 });
