@@ -105,3 +105,38 @@ The pinned version is `HYPERFRAMES_VERSION` in `toolchain.ts`. Bumping it instal
 ### Tests
 
 `LIVE=1 node --test test/api/contract-renderer.test.ts` runs the shared contract against the real toolchain, with the fake agent supplying a minimal composition per scene (no model needed). Its toolchain cache defaults to `<tmpdir>/rocket-explainer-live`, or `EXPLAINER_HOME` when set.
+
+## One-pager visual
+
+Renderer id `html-visual` (output type `visual`): an agent composes the whole one-pager as one self-contained HTML page in the style, and headless Chromium captures it to PNG. Select it with `providers.renderer.visual = "html-visual"` in settings.
+
+**Code:** `src/providers/visual/` (`renderer.ts`, `prompt.ts`). Viewer: `web/js/viewers/visual.js`.
+
+**Needs:** a headless Chromium (`npx playwright install chromium`, or Google Chrome). `explainer doctor` runs the headless-browser check when this renderer is selected. No other dependencies, no network.
+
+### How a render works
+
+1. Panels are the scenes: `title`, `narration` (the panel's body text) and `visuals` (what it shows).
+2. One agent task, kind `visual-page`, file tools only (`Read`, `Write`, `Edit`, `Glob`, `Grep`), `expectFiles: ['visual.html']`, workdir `page/attempt-<n>/`. `inputs.json` carries `title`, `panels`, the full DESIGN.md (`style`), its `## Visual` section (`visualRules`) and YAML `tokens`, `width` (1600) and `maxHeight` (6000), `mode` (`compose` or `revise`), `dirty`, `comments`, and `problems` on a retry.
+3. The page contract (stated in the prompt, then checked):
+   - a complete `<!doctype html>` document, all CSS inline, diagrams as inline SVG;
+   - no `<script>`, no `@import`, no URL other than `#fragment` or `data:` in `src`, `href`, `srcset`, `url()` and the like (fonts are named with system fallbacks, never loaded);
+   - exactly 1600 CSS px wide (no horizontal overflow), as tall as the content up to 6000 px, or the aspect ratio the `## Visual` section states;
+   - one element per panel with `id` and `data-scene` both set to the scene id, and no other `data-scene`.
+4. Checks: a source check (`checkHtml`) for scripts and URLs, then the page is loaded in Chromium at 1600 px with JavaScript off and every request other than the page itself blocked; the DOM check confirms one `data-scene` element per id and the size limits, and any blocked request is a problem too. A page that fails goes back to the agent once with the problem list and the failed file (`failed-attempt.html`); a second failure fails the render with those problems.
+5. Capture: the same browser session records each panel's box and takes a full-page screenshot at device scale 2, so `visual.png` is 3200 px wide and exactly twice the page height.
+6. Outputs: `visual.png` (primary), `visual.html`, and `visual.json` (`{ width, height, scale, panels: [{ id, x, y, width, height, hash }] }` in CSS px). Style samples store them as `sample.png`, `sample.html`, `sample.json`.
+
+### Re-render
+
+With `cacheDir` and `dirtyScenes`, the previous `visual.html` is copied into the agent's workdir as `previous.html` and the task runs in `revise` mode: the agent edits only the dirty panels and keeps the rest of the markup as is. Each panel's `hash` (of its markup) in `visual.json` lets the renderer log when a clean panel changed anyway. `rendered` is the dirty ids. With no dirty panels, the previous page is recaptured without an agent call. Comments reach the renderer through the revised scene text (the build's revise step), plus `req.comments` when a caller passes them.
+
+### Viewer
+
+The PNG, with a Zoom group: Fit (the whole poster within 75% of the window height) and Actual size (1 CSS px per canvas px, scrollable). Scene chips call `seek(scene)`, which outlines that panel on the image from `visual.json` and scrolls it into view; click the outline to clear it. Output without the sidecar (the fake renderer) shows the image and zoom, and seek does nothing. Links offer `visual.png` and `visual.html`.
+
+### Tests
+
+- `test/api/contract-renderer.test.ts`: the shared contract for `html-visual` with the fake agent supplying the page (runs by default; needs Chromium).
+- `test/api/visual-renderer.test.ts`: one element per panel id, no external URLs, PNG = canvas at 2x, panel boxes; re-render revises only the dirty panel (clean panel hashes unchanged); a page loading an external URL is retried once with the problems; a missing panel fails after the retry; blocked requests are reported; doctor includes the browser check.
+- `test/e2e/visual-viewer.spec.ts`: zoom toggle on fake output; seek outline position, comment and re-render with `html-visual`; the on-demand visual style sample with comment and re-render.

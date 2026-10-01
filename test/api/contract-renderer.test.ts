@@ -46,3 +46,7 @@ import { createFakeDocumentRenderer } from '../../src/providers/fake/renderer.ts
 rendererContract('fake', () => createFakeDocumentRenderer(), { outputType: 'deck', expectExt: ['.html', '.pptx'] });
 rendererContract('fake', () => createFakeDocumentRenderer(), { outputType: 'doc', expectExt: ['.pdf', '.md'] });
 rendererContract('fake', () => createFakeDocumentRenderer(), { outputType: 'visual', expectExt: ['.png', '.html'] });
+
+// One-pager visual: real headless Chromium capture, fake agent supplying the page. Runs by default, like the browser test.
+import { createVisualRenderer } from '../../src/providers/visual/renderer.ts';
+rendererContract('html-visual', () => createVisualRenderer(), { outputType: 'visual', expectExt: ['.png', '.html', '.json'] });

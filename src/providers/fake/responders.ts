@@ -144,3 +144,46 @@ responders['style-suggestions'] = (inputs) => ({
     { topic: 'avoid', text: `Never set text below 32px, even for "${String(inputs.description ?? '').split(/\s+/).slice(0, 3).join(' ')}".` },
   ],
 });
+
+/**
+ * One-pager page: the panels in a grid over the style's palette, deterministic per panel (clean
+ * panels come out byte-identical on a re-render). Panel visuals containing "[fake: external once]"
+ * get an external image on the first attempt (tests the check + retry).
+ */
+responders['visual-page'] = (inputs) => {
+  const colors = Object.fromEntries(palette(String(inputs.style ?? '')));
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+  const panels: any[] = inputs.panels ?? [];
+  const bad = !inputs.problems && panels.some((p) => String(p.visuals ?? '').includes('[fake: external once]'));
+  const panel = (p: any, i: number) => `<section id="${esc(p.id)}" data-scene="${esc(p.id)}" class="panel${i === 0 ? ' hero' : ''}">
+  <h2>${esc(String(p.title ?? ''))}</h2>
+  <p>${esc(String(p.body ?? ''))}</p>
+  <p class="visuals">${esc(String(p.visuals ?? ''))}</p>
+</section>`;
+  return { __files: { 'visual.html': `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>${esc(String(inputs.title ?? ''))}</title>
+<style>
+  html, body { margin: 0; }
+  body { width: ${Number(inputs.width) || 1600}px; background: ${colors.background ?? '#0b0f14'}; color: ${colors.text ?? '#f7fafc'}; font: 400 22px system-ui, sans-serif; }
+  header { padding: 64px 64px 24px; }
+  h1 { margin: 0; font-size: 72px; color: ${colors.primary ?? '#4fd1c5'}; }
+  main { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; padding: 32px 64px 64px; }
+  .panel { background: ${colors.surface ?? '#141a22'}; border-radius: 24px; padding: 32px; }
+  .panel.hero { grid-column: 1 / -1; }
+  h2 { margin: 0 0 12px; font-size: 36px; color: ${colors.secondary ?? '#7f9cf5'}; }
+  .visuals { color: ${colors.muted ?? '#a0aec0'}; font-size: 20px; }
+</style>
+</head>
+<body>
+<header><h1>${esc(String(inputs.title ?? ''))}</h1></header>
+<main>
+${panels.map(panel).join('\n')}
+</main>
+${bad ? '<img src="https://example.com/logo.png" alt="">' : ''}
+</body>
+</html>
+` } };
+};
