@@ -1,6 +1,6 @@
-import { join, resolve } from 'node:path';
+import { join, resolve, basename } from 'node:path';
 import { homedir } from 'node:os';
-import { stat } from 'node:fs/promises';
+import { stat, mkdir, copyFile } from 'node:fs/promises';
 import type { App } from '../app.ts';
 import type { JobCtx } from '../jobs.ts';
 import { ExplainerStore, type SourceReport, type Plan } from '../explainer/store.ts';
@@ -17,20 +17,34 @@ export function surfaceFor(app: App, surface: string | undefined) {
 export async function runSourceReport(app: App, id: string, ctx: JobCtx) {
   const e = await app.explainers.get(id);
   const sources = e.sources.filter((s) => s.enabled).map((s) => ({ ...s, value: s.kind === 'path' ? resolve(expandHome(s.value)) : s.value }));
-  // Folders the agent may read: each path source (or its parent dir for files).
+  // Keep the agent's read access to exactly what the user chose: files are copied into the workdir,
+  // and only folders the user named are added (never a file's parent, which may be their home dir).
+  const workdir = join(app.paths.home, 'work', ctx.id);
+  await mkdir(join(workdir, 'sources'), { recursive: true });
   const readDirs: string[] = [];
-  for (const s of sources.filter((s) => s.kind === 'path')) {
-    try { readDirs.push((await stat(s.value)).isDirectory() ? s.value : resolve(s.value, '..')); } catch {}
+  const forAgent = [];
+  for (const s of sources) {
+    let value = s.value;
+    if (s.kind === 'path') {
+      const st = await stat(s.value).catch(() => null);
+      if (st?.isDirectory()) readDirs.push(s.value);
+      else if (st?.isFile()) {
+        value = join(workdir, 'sources', `${s.id}-${basename(s.value)}`);
+        await copyFile(s.value, value);
+      }
+    }
+    forAgent.push({ id: s.id, kind: s.kind, value, ...(value !== s.value ? { original: s.value } : {}) });
   }
   ctx.stage('Gathering sources', 0.1, `${sources.length} source${sources.length === 1 ? '' : 's'}`);
   const res = await surfaceFor(app, e.surface).run({
     kind: 'source-report',
     prompt: sourceReportPrompt(),
-    inputs: { brief: e.brief, sources: sources.map(({ id, kind, value }) => ({ id, kind, value })), corrections: e.corrections.map((c) => c.text) },
+    inputs: { brief: e.brief, sources: forAgent, corrections: e.corrections.map((c) => c.text) },
     resultFile: 'result.json',
     readDirs,
-    tools: ['Read', 'Glob', 'Grep', 'Write', 'WebFetch'],
-  }, { workdir: join(app.paths.home, 'work', ctx.id), model: e.model, effort: e.effort, signal: ctx.signal, onLog: ctx.log });
+    // WebFetch only when there are links to fetch, so local reads and an outbound channel don't share a session needlessly.
+    tools: ['Read', 'Glob', 'Grep', 'Write', ...(sources.some((s) => s.kind === 'url') ? ['WebFetch'] : [])],
+  }, { workdir, model: e.model, effort: e.effort, signal: ctx.signal, onLog: ctx.log });
   if (!res.ok) throw new Error(`agent failed (${res.error.kind}): ${res.error.message}`);
   const out = res.output ?? {};
   if (!Array.isArray(out.sources)) throw new Error('the report has no sources list');
@@ -63,6 +77,7 @@ export function validatePlan(p: any): string[] {
     const ids = new Set();
     for (const [i, s] of p.scenes.entries()) {
       if (!s?.id || !s?.title || !s?.visuals) problems.push(`scene ${i} lacks id/title/visuals`);
+      else if (!/^[A-Za-z0-9_-]{1,40}$/.test(String(s.id))) problems.push(`scene id ${JSON.stringify(s.id)} must be letters, digits, - or _`);
       if (ids.has(s?.id)) problems.push(`duplicate scene id ${s?.id}`);
       ids.add(s?.id);
     }

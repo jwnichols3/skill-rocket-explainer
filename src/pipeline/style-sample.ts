@@ -17,6 +17,7 @@ export function validateScenes(scenes: unknown): string[] {
   for (const [i, s] of scenes.entries()) {
     if (!s || typeof s !== 'object') { problems.push(`scene ${i} is not an object`); continue; }
     for (const k of ['id', 'title', 'narration', 'visuals']) if (typeof (s as any)[k] !== 'string' || !(s as any)[k].trim()) problems.push(`scene ${i} lacks ${k}`);
+    if (typeof (s as any).id === 'string' && !/^[A-Za-z0-9_-]{1,40}$/.test((s as any).id)) problems.push(`scene id ${JSON.stringify((s as any).id)} must be letters, digits, - or _`);
     if (ids.has((s as any).id)) problems.push(`duplicate scene id ${(s as any).id}`);
     ids.add((s as any).id);
   }

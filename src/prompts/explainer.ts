@@ -8,6 +8,7 @@ Read inputs.json in your working directory:
 - brief: what the user wants explained, and from what angle
 - sources: [{ id, kind, value }]. kind is
   - "path": a local file or folder. Read it (for folders, survey the tree and read what matters for the brief).
+    Files are copied into your working directory; "original" is where the user keeps it - refer to that.
   - "url": a web page. Fetch it.
   - "connector": something reachable through your connected tools (e.g. "the email thread about X").
     Use whatever tools you have; if you have none that reach it, say so.

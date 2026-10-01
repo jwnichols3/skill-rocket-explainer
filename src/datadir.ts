@@ -32,7 +32,8 @@ export async function readJson<T>(file: string, fallback: T): Promise<T> {
   try {
     return JSON.parse(await readFile(file, 'utf8')) as T;
   } catch (err: any) {
-    if (err.code === 'ENOENT') return fallback;
+    // ENOTDIR: a stray file (e.g. .DS_Store) where a folder was expected.
+    if (err.code === 'ENOENT' || err.code === 'ENOTDIR') return fallback;
     throw err;
   }
 }

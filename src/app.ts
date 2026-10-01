@@ -51,6 +51,8 @@ export async function createApp(paths: Paths, router: Router): Promise<App> {
     log,
     onSettingsChanged(fn) { listeners.push(fn); },
     async updateSettings(patch) {
+      const bad = validateProviders((patch as any)?.providers) ?? validateSettings(merge(settings, patch));
+      if (bad) throw new HttpError(400, bad);
       settings = await saveSettings(paths, patch);
       providers.reset();
       for (const fn of listeners) fn(settings);
@@ -87,10 +89,6 @@ export async function createApp(paths: Paths, router: Router): Promise<App> {
   router.put('/api/settings', async ({ body }) => {
     if (!body || typeof body !== 'object') throw new HttpError(400, 'expected a settings object');
     if (/"apiKey"\s*:/i.test(JSON.stringify(body))) throw new HttpError(400, 'API keys are not settings: use PUT /api/secrets/:provider');
-    const bad = validateProviders(body.providers);
-    if (bad) throw new HttpError(400, bad);
-    const invalid = validateSettings(merge(settings, body));
-    if (invalid) throw new HttpError(400, invalid);
     return { settings: await app.updateSettings(body) };
   });
 

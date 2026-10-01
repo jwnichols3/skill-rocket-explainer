@@ -1,4 +1,4 @@
-import { copyFile, mkdir } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, basename, extname } from 'node:path';
 import type { App } from '../app.ts';
 import type { JobCtx } from '../jobs.ts';
@@ -8,6 +8,9 @@ import type { TimedScene } from '../providers/types.ts';
 import { scriptPrompt, revisePrompt } from '../prompts/explainer.ts';
 import { narrateScenes } from './narrate.ts';
 import { surfaceFor } from './explainer-prep.ts';
+
+/** Scene ids name files and folders, so they must be safe path segments. */
+export const SCENE_ID = /^[A-Za-z0-9_-]{1,40}$/;
 
 /** Which scene a comment touches: explicit scene, else the scene under its timestamp, else null (whole piece). */
 export function commentScene(c: Comment, scenes: { id: string; startMs: number; durationMs: number }[]): string | null {
@@ -24,6 +27,7 @@ function validScenes(out: any, ids?: string[]): ScriptScene[] {
   if (!Array.isArray(scenes) || !scenes.length) throw new Error('the agent returned no scenes');
   for (const s of scenes) {
     if (!s?.id || typeof s.narration !== 'string' || typeof s.visuals !== 'string') throw new Error(`scene ${s?.id ?? '?'} lacks id/narration/visuals`);
+    if (!SCENE_ID.test(String(s.id))) throw new Error(`scene id ${JSON.stringify(s.id)} must be letters, digits, - or _ (it names files)`);
   }
   if (ids) {
     const missing = ids.filter((id) => !scenes.some((s: any) => s.id === id));
@@ -43,7 +47,8 @@ export async function runBuild(app: App, id: string, type: OutputType, mode: 'bu
   const store = app.explainers;
   const e: Explainer = await store.get(id);
   if (!e.styleId) throw new Error('pick a style first');
-  const plan = ExplainerStore.approved(e, type)?.plan;
+  // A build needs the approved plan; a re-render works from the built script (a revised plan may be pending).
+  const plan = ExplainerStore.approved(e, type)?.plan ?? (mode === 'rerender' ? ExplainerStore.latestPlan(e, type)?.plan : undefined);
   if (!plan) throw new Error('approve a plan first');
   const styleMeta = await app.styles.meta(e.styleId);
   const style = await app.styles.design(e.styleId);
@@ -104,8 +109,11 @@ export async function runBuild(app: App, id: string, type: OutputType, mode: 'bu
     const prevDir = prev ? store.roundDir(id, type, prev.n) : null;
     const reuse = new Map<string, TimedScene>();
     if (prev && prevDir) {
+      // Word timings live in the round's timeline.json (not in explainer.json).
+      const prevTimeline: TimedScene[] = await readFile(join(prevDir, 'timeline.json'), 'utf8').then(JSON.parse, () => []);
+      const wordsOf = (sid: string) => prevTimeline.find((t) => t.id === sid)?.words ?? [];
       for (const s of prev.scenes) if (!dirty.includes(s.id) || script.find((x) => x.id === s.id)?.narration === s.narration) {
-        reuse.set(s.id, { ...s, audioFile: join(prevDir, 'audio', `${s.id}.wav`), words: [] });
+        reuse.set(s.id, { ...s, audioFile: join(prevDir, 'audio', `${s.id}.wav`), words: wordsOf(s.id) });
       }
     }
     timed = await narrateScenes({
@@ -144,6 +152,7 @@ export async function runBuild(app: App, id: string, type: OutputType, mode: 'bu
   });
 
   ctx.stage('Packaging', 0.95);
+  await writeFile(join(dir, 'timeline.json'), JSON.stringify(timed.map(({ audioFile, ...s }) => s), null, 2));
   const files: string[] = [];
   const primaryName = FILE_NAME[type];
   await copyFile(out.primary, join(dir, primaryName));

@@ -24,7 +24,7 @@ export function explainerRoutes(app: App, router: Router) {
     }
     if (body.model !== undefined || body.effort !== undefined) Object.assign(out, pickModel(app, { model: current?.model, effort: current?.effort, ...body }));
     if (body.surface !== undefined) {
-      if (!AGENT_SURFACES[body.surface]) throw new HttpError(400, `unknown agent surface "${body.surface}"`);
+      if (typeof body.surface !== 'string' || !Object.hasOwn(AGENT_SURFACES, body.surface)) throw new HttpError(400, `unknown agent surface "${body.surface}"`);
       out.surface = body.surface;
     }
     if (typeof body.title === 'string') out.title = body.title.trim();
@@ -192,6 +192,7 @@ export function outputRoutes(app: App, router: Router) {
   router.put('/api/explainers/:id/outputs/:type/script', async ({ params, body }) => {
     const t = type(params.type);
     if (!Array.isArray(body?.scenes)) throw new HttpError(400, 'expected { scenes }');
+    if (app.jobs.active(`explainer:${params.id}`)) throw new HttpError(409, 'wait for the running job to finish; it would overwrite these edits');
     return withUrls(await store.update(params.id, (e) => {
       const state = e.outputs[t];
       if (!state) throw new HttpError(400, `build the ${t} first`);

@@ -80,6 +80,11 @@ export async function saveSettings(p: Paths, patch: unknown): Promise<Settings> 
 
 /** Checks the model list, defaults and Bedrock block of a merged settings object; returns an error message or null. */
 export function validateSettings(s: Settings): string | null {
+  // No auth: the app must only ever listen on loopback (a reverse proxy reaches it from there).
+  if (!['127.0.0.1', 'localhost', '::1'].includes(s.host)) return `host must be a loopback address (127.0.0.1, localhost or ::1), not "${s.host}"`;
+  if (!Number.isInteger(s.port) || s.port < 0 || s.port > 65535) return `port must be 0-65535, not ${JSON.stringify(s.port)}`;
+  if (!Array.isArray(s.publicHostnames) || s.publicHostnames.some((h) => typeof h !== 'string' || !/^[a-z0-9.-]+(:\d+)?$/i.test(h))) return 'publicHostnames must be a list of host names';
+  if (s.publicUrl !== undefined && typeof s.publicUrl !== 'string') return 'publicUrl must be a URL';
   if (!Array.isArray(s.models) || !s.models.length) return 'the model list cannot be empty';
   const ids = new Set<string>();
   for (const m of s.models) {

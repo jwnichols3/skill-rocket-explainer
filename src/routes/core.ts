@@ -67,6 +67,9 @@ export function coreRoutes(app: App, router: Router) {
     const root = area === 'styles' ? app.paths.styles : area === 'explainers' ? app.paths.explainers : null;
     if (!root) throw new HttpError(403, 'not a media path');
     // sendFile confines the resolved path to the area root, so ../ can't reach settings or secrets.
+    // Agent-written HTML (decks, visuals, samples) runs sandboxed: opaque origin and no network, so a
+    // prompt-injected page can't call this API even when opened directly.
+    if (/\.html?$/i.test(rest.at(-1) ?? '')) res.setHeader('content-security-policy', "sandbox allow-scripts; connect-src 'none'; form-action 'none'");
     await sendFile(req, res, root, rest.join('/'), url.searchParams.get('download') ?? undefined);
   });
 }

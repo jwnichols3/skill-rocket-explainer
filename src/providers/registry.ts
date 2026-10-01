@@ -71,7 +71,7 @@ export class Providers {
   constructor(env: ProviderEnv) { this.env = env; }
 
   private get<T>(kind: string, table: Record<string, Factory<T>>, id: string): T {
-    const f = table[id];
+    const f = Object.hasOwn(table, id) ? table[id] : undefined;
     if (!f) throw new Error(`no ${kind} named "${id}" (available: ${Object.keys(table).join(', ')})`);
     const key = `${kind}:${id}`;
     if (!this.cache.has(key)) this.cache.set(key, f.create(this.env));
@@ -92,10 +92,10 @@ export class Providers {
 /** Validates the provider block of a settings patch; returns an error message or null. */
 export function validateProviders(patch: Partial<Settings['providers']> | undefined): string | null {
   const p: Partial<Settings['providers']> = patch ?? {};
-  if (p.agent !== undefined && !AGENT_SURFACES[p.agent]) return `unknown agent surface "${p.agent}" (available: ${Object.keys(AGENT_SURFACES).join(', ')})`;
-  if (p.tts !== undefined && !TTS_PROVIDERS[p.tts]) return `unknown TTS provider "${p.tts}" (available: ${Object.keys(TTS_PROVIDERS).join(', ')})`;
+  if (p.agent !== undefined && !Object.hasOwn(AGENT_SURFACES, p.agent)) return `unknown agent surface "${p.agent}" (available: ${Object.keys(AGENT_SURFACES).join(', ')})`;
+  if (p.tts !== undefined && !Object.hasOwn(TTS_PROVIDERS, p.tts)) return `unknown TTS provider "${p.tts}" (available: ${Object.keys(TTS_PROVIDERS).join(', ')})`;
   for (const [type, id] of Object.entries(p.renderer ?? {})) {
-    const r = RENDERERS[id];
+    const r = Object.hasOwn(RENDERERS, id) ? RENDERERS[id] : undefined;
     if (!r) return `unknown renderer "${id}" (available: ${Object.keys(RENDERERS).join(', ')})`;
     if (!r.outputTypes.includes(type as OutputType)) return `renderer "${id}" does not produce ${type}`;
   }
