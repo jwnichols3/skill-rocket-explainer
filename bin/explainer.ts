@@ -15,6 +15,8 @@ usage:
   explainer stop               stop the app
   explainer open [path]        start if needed and open the app in a browser
   explainer status             print whether the app is running
+  explainer new [--brief TEXT] [--source S]... [--style NAME] [--type video|deck|doc|visual] [--title T] [--no-open]
+                               create an explainer, start gathering its sources, open it
   explainer doctor             check prerequisites and print fixes
 
 Data dir: $EXPLAINER_HOME or ~/.rocket-explainer`;
@@ -27,6 +29,49 @@ const p = await ensureDataDir(home);
 function flag(name: string): string | undefined {
   const i = process.argv.indexOf(name);
   return i > 0 ? process.argv[i + 1] : undefined;
+}
+
+function flags(name: string): string[] {
+  return process.argv.flatMap((a, i) => (a === name && process.argv[i + 1] !== undefined ? [process.argv[i + 1]] : []));
+}
+
+async function call(info: ServerInfo, path: string, body?: unknown): Promise<any> {
+  const res = await fetch(`http://127.0.0.1:${info.port}${path}`, body === undefined ? {} : {
+    method: 'POST', headers: { 'x-explainer': '1', 'content-type': 'application/json' }, body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? `${res.status}`);
+  return data;
+}
+
+/** Creates an explainer from flags (the chat entry flow hands off through this). */
+async function newExplainer() {
+  const info = await start();
+  const styleArg = flag('--style');
+  let styleId: string | null = null;
+  if (styleArg) {
+    const styles: { id: string; name: string | null }[] = await call(info, '/api/styles');
+    const want = styleArg.toLowerCase();
+    const hit = styles.find((s) => s.id === styleArg) ?? styles.find((s) => s.name?.toLowerCase() === want) ?? styles.find((s) => s.name?.toLowerCase().includes(want));
+    if (!hit) {
+      console.error(`no style matches "${styleArg}". Styles: ${styles.map((s) => s.name ?? s.id).join(', ') || 'none yet'}`);
+      process.exit(1);
+    }
+    styleId = hit.id;
+  }
+  try {
+    const e = await call(info, '/api/explainers', {
+      title: flag('--title') ?? '', brief: flag('--brief') ?? '', styleId, outputType: flag('--type') ?? 'video',
+      sources: flags('--source').map((value) => ({ value })),
+    });
+    await call(info, `/api/explainers/${e.id}/report`, {});
+    const url = `${info.url}/explainers/${e.id}`;
+    console.log(url);
+    if (!process.argv.includes('--no-open')) openBrowser(url);
+  } catch (err: any) {
+    console.error(err.message);
+    process.exit(1);
+  }
 }
 
 async function running(): Promise<ServerInfo | null> {
@@ -92,6 +137,7 @@ const cmd = process.argv[2];
 switch (cmd) {
   case 'start': await start(); break;
   case 'stop': await stop(); break;
+  case 'new': await newExplainer(); break;
   case 'open': {
     const info = await start();
     const url = info.url + (process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '/');
