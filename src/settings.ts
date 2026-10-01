@@ -20,6 +20,8 @@ export interface Settings {
   defaults: { model: string; effort: string };
   /** Amazon Polly. Empty profile = the default AWS credential chain. */
   polly: { region: string; profile?: string };
+  /** Set once seed styles have been copied in, so deleting one doesn't bring it back. */
+  seeded?: boolean;
   /** Test-only knobs for the fake providers. */
   fake?: { failKinds?: string[]; delayMs?: number };
 }

@@ -16,7 +16,8 @@ export async function startTestApp(settings: Record<string, unknown> = {}): Prom
   const server = await startServer({
     home,
     port: 0,
-    settings: { providers: { agent: 'fake', tts: 'fake', renderer: { video: 'fake', deck: 'fake', doc: 'fake', visual: 'fake' } }, ...settings },
+    // seeded: tests start with no styles; seeding has its own test.
+    settings: { seeded: true, providers: { agent: 'fake', tts: 'fake', renderer: { video: 'fake', deck: 'fake', doc: 'fake', visual: 'fake' } }, ...settings },
   });
   const api = (path: string, init: RequestInit = {}) => {
     const headers = new Headers(init.headers);

@@ -8,6 +8,7 @@ import { VERSION } from './version.ts';
 import { JobRunner } from './jobs.ts';
 import { StyleStore } from './style/store.ts';
 import { coreRoutes } from './routes/core.ts';
+import { seedStyles } from './style/seed.ts';
 import { secretRoutes } from './routes/secrets.ts';
 import { styleRoutes } from './routes/styles.ts';
 import { explainerRoutes, outputRoutes } from './routes/explainers.ts';
@@ -46,6 +47,7 @@ export async function createApp(paths: Paths, router: Router): Promise<App> {
     onSettingsChanged(fn) { listeners.push(fn); },
     async shutdown() { await jobs.shutdown(); },
   };
+  settings = await seedStyles(paths, settings, app.styles, providers);
   coreRoutes(app, router);
   secretRoutes(app, router);
   styleRoutes(app, router);
