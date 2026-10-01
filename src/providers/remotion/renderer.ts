@@ -152,7 +152,7 @@ export function createRemotionRenderer(opts: { projectDir: string }): Renderer {
 
       // Write each dirty scene, render, and give a failing scene one more go with its error.
       const attempts = new Map<string, number>();
-      for (const s of dirty) { await writeScene(s, 1); attempts.set(s.id, 1); }
+      for (const s of dirty) { req.onScene?.(s.id, req.scenes.indexOf(s), req.scenes.length); await writeScene(s, 1); attempts.set(s.id, 1); }
       let remaining = dirty;
       while (remaining.length) {
         const pass = await renderPass(remaining);

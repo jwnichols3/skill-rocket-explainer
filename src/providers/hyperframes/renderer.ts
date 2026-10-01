@@ -52,6 +52,7 @@ export function createHyperFramesRenderer(opts: HyperFramesOptions): Renderer {
           log(`reused scene ${scene.id} from cache`);
         } else {
           toolchain ??= await ensureToolchain(opts.cacheRoot, log);
+          req.onScene?.(scene.id, req.scenes.indexOf(scene), req.scenes.length);
           await renderScene(toolchain, req, scene, clip);
           rendered.push(scene.id);
         }

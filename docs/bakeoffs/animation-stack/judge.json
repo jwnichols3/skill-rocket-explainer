@@ -1,0 +1,107 @@
+{
+  "judge": "claude-opus-5-5 high, blind",
+  "usage": {
+    "inputTokens": 1387060,
+    "outputTokens": 13733,
+    "costUsd": 1.5240027999999999,
+    "durationMs": 139943
+  },
+  "results": [
+    {
+      "label": "A",
+      "model": "claude-opus-5-5",
+      "stack": "hyperframes",
+      "total": 61,
+      "scores": {
+        "style": 5,
+        "motion": 4,
+        "camera": 4,
+        "sync": 4,
+        "coverage": 5,
+        "polish": 4,
+        "humour": 5
+      },
+      "strengths": "Closest to the seed: near-black with a visible blueprint grid, heavy display caps, neon-green subject (envelope, message bar, packets), blue structure (router graph, connectors) and acid-yellow used only for 'look here' (the MESSAGE underline at 2.0s on 'message' 2.18s, the packet ring, the ADDRESS LABEL underline at 8.0s on 'labelled' 8.3s, router rings on 'hop by hop' 12.0-13.0s). The title assembles letter by letter, then the camera pushes into the envelope (4.0s). The message bar is sliced on 'chopped' (6.0s) into four staggered packet boxes, and the router diagram draws on edge by edge. Packets hop with motion trails, and a slow pull-back reveals the destination. Reassembly lands on 'reassemble' (14.0-14.5s). The humour works well: the packets read SO LONG / AND THANKS / FOR ALL / THE FISH, there's a muted mono footnote '*No messages were harmed.', and packet 3 arrives late in alert pink just as the narrator says 'Usually in order'.",
+      "weaknesses": "Both scene transitions pass through near-empty black frames (4.5s and 10.0-10.5s), so the dive-through reads as a fade, not a reveal inside the element. Routers only appear at 11.0s, about 0.8s after 'Routers' (10.16s). During the lateral pan (8.5s) and in scene 3 (11.0-13.0s) the diagram runs off the right edge, and the input arrow starts outside the 96px safe area. 'ENTRY 042 · ST' types on visibly.",
+      "renderMs": 784521,
+      "sceneAgentCostUsd": 2.9537918000000003,
+      "planCostUsd": 0.2171732,
+      "sceneAgentTasks": 3,
+      "sceneAgentFailures": 0
+    },
+    {
+      "label": "B",
+      "model": "claude-opus-5-5",
+      "stack": "remotion",
+      "total": 54,
+      "scores": {
+        "style": 4,
+        "motion": 4,
+        "camera": 4,
+        "sync": 3,
+        "coverage": 5,
+        "polish": 4,
+        "humour": 3
+      },
+      "strengths": "Same strong structure as A: title, envelope push-in, message bar sliced by yellow cut lines on 'chopped' (6.0s), staggered packet boxes, a 'PACKET: DATA + ADDRESS LABEL' pop-up card, a branching router graph drawn on, packet trails with yellow hop rings, and a destination with a REASSEMBLED pop-up. Its blueprint grid is the most visible and on-spec of the four, and labels use a real mono face. Routers appear at 10.5s, closer to the word than in A. Camera pans and pulls back smoothly within scenes.",
+      "weaknesses": "The opening has about 1.5s with only 'ENTRY 042' on screen before the title starts (1.5s). The title face looks like Helvetica/Arial bold, not Inter 900. Packets hold placeholder lines, not content, so there's no story in the data. The highlight underline sits under the tiny '1/4' rather than the label the narrator names. Reassembly lands at 15.0-15.5s, about 1s after 'reassemble' (13.9s). Blank transition frames appear at 4.5s and 10.0s. The final merged bar shows a red-outlined segment that looks like a rendering glitch. Humour is limited to one footnote; nothing visual lands the 'Usually'.",
+      "renderMs": 868143,
+      "sceneAgentCostUsd": 3.1943506,
+      "planCostUsd": 0.2171732,
+      "sceneAgentTasks": 3,
+      "sceneAgentFailures": 0
+    },
+    {
+      "label": "C",
+      "model": "claude-fable-5-1",
+      "stack": "hyperframes",
+      "total": 51,
+      "scores": {
+        "style": 3,
+        "motion": 3,
+        "camera": 5,
+        "sync": 4,
+        "coverage": 5,
+        "polish": 3,
+        "humour": 4
+      },
+      "strengths": "Best camera of the four. It does the signature move literally: the camera pushes into the O of 'HOW' (1.5s), and the 'hello' message is revealed inside it. A second dive into router R3 (8.5s) opens the out-of-order scene, and the finale pull-back (12.5-14.0s) reveals source, routers and inbox together. Sync is tight: the address 'TO: 203.0.113.9' pops and underlines on 'address' (5.9-6.5s), R1/R2/R3 rings land on 'router to router' (7.5-8.0s), the 'Out of order' card arrives on 'out of order' (9.7s), and packets snap into order on 'reassemble' (12.2-12.5s). Asides are on-tone ('*Mostly harmless. Mostly.', '*Packets have no sense of occasion.', 'Delivered. Allegedly.').",
+      "weaknesses": "The blueprint grid is almost invisible, and acid-yellow appears only as small underlines, so it reads more like generic dark UI than the seed style. The hero title is small (about title size, not hero). Continuity breaks: four filled 'he/l/l/o' packets jump to three empty vertical boxes (5.0 to 5.5s), then to PKT 03/01/04/02, then to 'he/ll/o/.' pieces, and 11.5 to 12.0s is effectively a cut. In the finale the Source panel is clipped at the left edge, and R3 sits at the safe-area edge. There are three asides plus a pop-up joke, slightly over-seasoned, and nothing visual lands the 'Usually'.",
+      "renderMs": 1715030,
+      "sceneAgentCostUsd": 14.555945000000001,
+      "planCostUsd": 0.6572899999999999,
+      "sceneAgentTasks": 4,
+      "sceneAgentFailures": 0
+    },
+    {
+      "label": "D",
+      "model": "claude-fable-5-1",
+      "stack": "remotion",
+      "total": 46,
+      "scores": {
+        "style": 3,
+        "motion": 3,
+        "camera": 4,
+        "sync": 4,
+        "coverage": 4,
+        "polish": 2,
+        "humour": 4
+      },
+      "strengths": "It also dives through the O of the title, and the mid-dive frame (2.5s) clearly shows the message card inside the letter. A second push into R3 (8.5s) leads into the out-of-order scene. Packets pop in with stagger (3.5-4.0s). The address pop-up and underline land on 'address' (6.0-6.5s), and router rings land on 'router to router'. 'Out of order' arrives on cue (9.5s), the shuffle-and-sort lands on 'reassemble' (12.0-12.5s), and 'Delivered. Allegedly.' lands on 'happened'.",
+      "weaknesses": "The worst composition and polish. In scene 2 the camera drifts so content hugs and clips the left edge (packet 01 cut off, '.9' of the address card cut off at 7.5-8.0s), while the right half stays empty. R1 overlaps packet 04 (7.0s), and in the finale a connector line runs straight through the 'hello' card. Packets are empty boxes throughout, and the inbox never fills, so the explanation is thin. The diagram is a single straight R1-R2-R3 chain, not a network. The grid is not visible, and the title face is Helvetica-like and small. Overlapping boxes mid-shuffle (12.0s) look messy rather than purposeful.",
+      "renderMs": 1236753,
+      "sceneAgentCostUsd": 8.912360500000002,
+      "planCostUsd": 0.6572899999999999,
+      "sceneAgentTasks": 4,
+      "sceneAgentFailures": 0
+    }
+  ],
+  "ranking": [
+    "A",
+    "B",
+    "C",
+    "D"
+  ],
+  "summary": "A is the clearest win. It is the most faithful to the seed palette and grid, with yellow highlights timed to the words, a real branching router diagram, and the best-integrated humour (the 'So long and thanks for all the fish' packets and the late packet 3 on 'Usually'), held back only by black-frame transitions and some edge clipping. B shares A's structure but is weaker on typography, content, and reassembly timing. C has the best camera (true dive-throughs into a letter and a node) but loses style fidelity and continuity, and D shares C's camera ideas but is undermined by clipped, overlapping, lopsided layouts.",
+  "failed": []
+}
