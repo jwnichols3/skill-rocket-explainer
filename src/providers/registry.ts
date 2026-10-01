@@ -5,6 +5,7 @@ import type { CheckDef } from '../doctor.ts';
 import { createFakeAgent } from './fake/agent.ts';
 import { createFakeTts } from './fake/tts.ts';
 import { createFakeVideoRenderer } from './fake/renderer.ts';
+import { createClaudeSurface, claudeChecks, SUBSCRIPTION } from './claude/agent.ts';
 
 export interface ProviderEnv { paths: Paths; settings: () => Settings }
 
@@ -18,6 +19,7 @@ type Factory<T> = {
 /** Every implementation lives here. Adding a provider = adding an entry. */
 export const AGENT_SURFACES: Record<string, Factory<AgentSurface>> = {
   fake: { label: 'Fake agent (tests)', create: (env) => createFakeAgent(() => env.settings().fake ?? {}) },
+  'claude-subscription': { label: SUBSCRIPTION.label, create: () => createClaudeSurface(SUBSCRIPTION), checks: claudeChecks(SUBSCRIPTION, { subscription: true }) },
 };
 
 export const TTS_PROVIDERS: Record<string, Factory<TtsProvider>> = {
