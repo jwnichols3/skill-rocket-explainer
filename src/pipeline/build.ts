@@ -56,6 +56,7 @@ export async function runBuild(app: App, id: string, type: OutputType, mode: 'bu
 
   let script: ScriptScene[];
   let dirty: string[];
+  let renderComments: string[] = [];
   if (mode === 'build' || !prev) {
     ctx.stage('Writing the script', 0.05, `${e.model} · ${e.effort}`);
     const res = await agent.run({
@@ -74,6 +75,8 @@ export async function runBuild(app: App, id: string, type: OutputType, mode: 'bu
       return !before || before.narration !== s.narration || before.visuals !== s.visuals;
     }).map((s) => s.id);
     const anchored = prev.comments.map((c) => ({ text: c.text, sceneId: commentScene(c, prev.scenes) }));
+    // The user's exact words also go to the renderer, so per-scene agents see them, not just the revised script.
+    renderComments = anchored.map((c) => (c.sceneId ? `[${c.sceneId}] ${c.text}` : c.text));
     const commented = anchored.some((c) => c.sceneId === null) ? script.map((s) => s.id) : [...new Set(anchored.map((c) => c.sceneId!))];
     if (commented.length) {
       ctx.stage('Revising scenes', 0.05, `${commented.length} scene${commented.length === 1 ? '' : 's'} with comments`);
@@ -132,7 +135,7 @@ export async function runBuild(app: App, id: string, type: OutputType, mode: 'bu
     outputType: type, style, title: plan.title || e.title, scenes: timed, workdir: join(dir, 'render'),
     dirtyScenes: mode === 'build' ? undefined : dirty,
     cacheDir: prev ? join(store.roundDir(id, type, prev.n), 'render') : undefined,
-    agent: { surface: agent, model: e.model, effort: e.effort }, onLog: ctx.log, signal: ctx.signal,
+    agent: { surface: agent, model: e.model, effort: e.effort }, comments: renderComments, onLog: ctx.log, signal: ctx.signal,
     onScene: (sceneId, i, total) => {
       const s = script.find((x) => x.id === sceneId);
       ctx.progress(0.5 + 0.4 * (i / total), `scene ${i + 1}/${total}: ${s?.title ?? sceneId}`);

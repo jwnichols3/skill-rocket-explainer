@@ -7,6 +7,7 @@ test('a style renders a deck sample on demand, then comments refine it', async (
   await page.goto(`/styles/${s.id}`);
   await page.getByRole('tab', { name: /Deck/ }).click();
   await expect(page.locator('iframe.output-frame')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('iframe.output-frame')).toHaveAttribute('src', /rounds\/2\/sample\.html/);
   await expect(page.getByRole('tab', { name: 'Deck', exact: true })).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('.round.current')).toContainText('Round 2');
   await page.getByRole('textbox', { name: 'Comment' }).fill('bigger slide titles');

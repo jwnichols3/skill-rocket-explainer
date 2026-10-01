@@ -5,18 +5,21 @@ import { getSettings } from '../components/pickers.js';
 export async function settingsView(root) {
   const [{ settings, available }, secrets] = await Promise.all([api('/api/settings'), api('/api/secrets')]);
   const ttsDd = h('dd', settings.providers.tts);
-  const videoRenderers = available.renderer.filter((r) => r.outputTypes.includes('video'));
-  const renderer = h('select', {
-    id: 'video-renderer',
-    async onchange() {
-      try {
-        await api('/api/settings', { method: 'PUT', body: { providers: { renderer: { video: renderer.value } } } });
-        toast(`Video renderer: ${renderer.selectedOptions[0].textContent}`);
-      } catch (err) {
-        toast(err.message, 'error');
-      }
-    },
-  }, videoRenderers.map((r) => h('option', { value: r.id, selected: r.id === settings.providers.renderer.video }, r.label)));
+  const TYPES = [['video', 'Video renderer'], ['deck', 'Deck renderer'], ['doc', 'Briefing doc renderer'], ['visual', 'Visual renderer']];
+  const rendererPicker = (type, label) => {
+    const select = h('select', {
+      id: `${type}-renderer`,
+      async onchange() {
+        try {
+          await api('/api/settings', { method: 'PUT', body: { providers: { renderer: { [type]: select.value } } } });
+          toast(`${label}: ${select.selectedOptions[0].textContent}`);
+        } catch (err) {
+          toast(err.message, 'error');
+        }
+      },
+    }, available.renderer.filter((r) => r.outputTypes.includes(type)).map((r) => h('option', { value: r.id, selected: r.id === settings.providers.renderer[type] }, r.label)));
+    return [h('dt', h('label', { for: `${type}-renderer` }, label)), h('dd', select)];
+  };
   root.append(h('section.page',
     h('header.page-head', h('h1', 'Settings')),
     h('div.panel',
@@ -24,7 +27,7 @@ export async function settingsView(root) {
       h('dl.kv',
         h('dt', 'Agent surface'), h('dd', settings.providers.agent),
         h('dt', 'Voice provider'), ttsDd,
-        h('dt', h('label', { for: 'video-renderer' }, 'Video renderer')), h('dd', renderer))),
+        TYPES.map(([type, label]) => rendererPicker(type, label)))),
     voiceProviders(settings, available.tts, secrets, (id) => { ttsDd.textContent = id; })));
   const surfaces = agentSurfacesPanel(settings, available);
   root.lastElementChild.append(surfaces.el, modelsPanel(settings, (models) => surfaces.setModels(models)));

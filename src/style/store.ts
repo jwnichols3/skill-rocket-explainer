@@ -69,7 +69,7 @@ export interface StyleReference {
 export interface StyleView extends StyleMeta {
   design: string;
   palette: [string, string][];
-  rounds: (Round & { outputType: OutputType; designUrl: string; sampleUrl: string; fileUrls: string[] })[];
+  rounds: (Round & { outputType: OutputType; designUrl: string; url: string; sampleUrl: string; fileUrls: string[] })[];
   references: (StyleReference & { fileUrl?: string; frameUrls?: string[] })[];
 }
 
@@ -116,7 +116,7 @@ export class StyleStore {
     const rounds = (await this.rounds(id)).map((r) => {
       const base = `/media/styles/${id}/rounds/${r.n}`;
       const files = r.files ?? ['sample.mp4'];
-      return { ...r, outputType: r.outputType ?? 'video', designUrl: `${base}/DESIGN.md`, sampleUrl: `${base}/${files[0]}`, fileUrls: files.map((f) => `${base}/${f}`) };
+      return { ...r, outputType: r.outputType ?? 'video', designUrl: `${base}/DESIGN.md`, url: `${base}/${files[0]}`, sampleUrl: `${base}/${files[0]}`, fileUrls: files.map((f) => `${base}/${f}`) };
     });
     const media = `/media/styles/${id}/references`;
     const references = (m.references ?? []).map((r) => ({

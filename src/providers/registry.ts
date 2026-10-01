@@ -108,5 +108,6 @@ export function providerChecks(s: Settings): CheckDef[] {
   ids.add(AGENT_SURFACES[s.providers.agent]);
   ids.add(TTS_PROVIDERS[s.providers.tts]);
   for (const id of Object.values(s.providers.renderer)) ids.add(RENDERERS[id]);
-  return [...ids].filter(Boolean).flatMap((f) => f.checks ?? []);
+  const seen = new Set<string>();
+  return [...ids].filter(Boolean).flatMap((f) => f.checks ?? []).filter((c) => !seen.has(c.id) && !!seen.add(c.id));
 }

@@ -64,6 +64,20 @@ Write result.json in your working directory:
 Scene ids: s1, s2, ... If revising, keep ids stable for units that survive.`;
 }
 
+const SCRIPT_FIELDS: Record<OutputType, string> = {
+  video: `- narration: the exact words to be spoken. Tight, concrete, conversational; aim for 2.5 words per second
+  of the scene's intended length.
+- visuals: precise direction for what appears on screen and how it moves, in this style: layout, text that
+  pops up, boxes, diagrams, camera moves, transitions in and out.`,
+  deck: `- narration: the slide's speaker notes, in full sentences.
+- visuals: the slide itself: title, the few words of on-slide text (at most 3 bullets), and the layout,
+  diagram, boxes, table or chart with their actual labels and numbers.`,
+  doc: `- narration: the section's final body text, in Markdown paragraphs (no headings; the title is the heading).
+- visuals: the callouts, small tables, lists or figures for this section, with their actual content.`,
+  visual: `- narration: the panel's one or two sentences of copy.
+- visuals: the panel's layout, diagram, key number or chart, with actual labels and values.`,
+};
+
 export function scriptPrompt(outputType: OutputType): string {
   return `You are the writer for Rocket Explainer. Turn an approved plan into the final script for ${UNIT[outputType].split('.')[0]}.
 
@@ -74,11 +88,8 @@ Read inputs.json in your working directory:
 - brief: the angle and audience.
 
 For each scene write:
-- narration: the exact words to be spoken (video) or the body text (other types). Tight, concrete, conversational.
-  For video, aim for 2.5 words per second of the scene's intended length.
-- visuals: precise direction for what appears on screen and how it moves, in this style: layout, text that
-  pops up, boxes, diagrams, camera moves, transitions in and out. Another agent will implement it without
-  seeing anything else, so be specific.
+${SCRIPT_FIELDS[outputType]}
+Another agent will implement it without seeing anything else, so be specific.
 
 Write result.json in your working directory: { "scenes": [{ "id": "s1", "title": "...", "narration": "...", "visuals": "..." }] }`;
 }
