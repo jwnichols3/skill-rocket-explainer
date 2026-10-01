@@ -8,6 +8,7 @@ import type { StyleComment } from '../style/store.ts';
 import { validateDesign } from '../style/design.ts';
 import { styleSamplePrompt, styleTypeSamplePrompt, SAMPLE_ELEMENTS } from '../prompts/style.ts';
 import { narrateScenes } from './narrate.ts';
+import { referenceInputs } from './style-helpers.ts';
 
 export function validateScenes(scenes: unknown): string[] {
   if (!Array.isArray(scenes) || scenes.length === 0) return ['scenes must be a non-empty array'];
@@ -38,6 +39,7 @@ export async function runStyleSample(app: App, styleId: string, ctx: JobCtx, opt
 
   ctx.stage('Designing the style', 0.05, `${meta.model} · ${meta.effort}`);
   const agent = app.providers.agent();
+  const references = await referenceInputs(app, styleId, meta.references ?? [], join(work, 'agent'));
   const res = await agent.run({
     kind: 'style-sample',
     prompt: type === 'video' ? styleSamplePrompt() : styleTypeSamplePrompt(type),
@@ -48,6 +50,7 @@ export async function runStyleSample(app: App, styleId: string, ctx: JobCtx, opt
       previousScenes: previous?.scenes ?? [],
       voice: meta.voice,
       outputType: type,
+      references,
     },
     resultFile: 'result.json',
   }, { workdir: join(work, 'agent'), model: meta.model, effort: meta.effort, signal: ctx.signal, onLog: ctx.log });
