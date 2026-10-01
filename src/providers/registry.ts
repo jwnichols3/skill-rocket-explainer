@@ -4,7 +4,7 @@ import type { Paths } from '../datadir.ts';
 import type { CheckDef } from '../doctor.ts';
 import { createFakeAgent } from './fake/agent.ts';
 import { createFakeTts } from './fake/tts.ts';
-import { createFakeVideoRenderer } from './fake/renderer.ts';
+import { createFakeVideoRenderer, createFakeDocumentRenderer } from './fake/renderer.ts';
 import { createPollyTts, pollyChecks } from './polly/tts.ts';
 import { createClaudeSurface, claudeChecks, SUBSCRIPTION } from './claude/agent.ts';
 import { createRemotionRenderer } from './remotion/renderer.ts';
@@ -39,7 +39,11 @@ export const TTS_PROVIDERS: Record<string, Factory<TtsProvider>> = {
 };
 
 export const RENDERERS: Record<string, Factory<Renderer> & { outputTypes: OutputType[] }> = {
-  fake: { label: 'Fake renderer (tests)', outputTypes: ['video'], create: () => createFakeVideoRenderer() },
+  fake: { label: 'Fake renderer (tests)', outputTypes: ['video', 'deck', 'doc', 'visual'], create: () => {
+    const video = createFakeVideoRenderer();
+    const docs = createFakeDocumentRenderer();
+    return { ...video, outputTypes: ['video', 'deck', 'doc', 'visual'], render: (req) => (req.outputType === 'video' ? video : docs).render(req) };
+  } },
   remotion: { label: 'Remotion', outputTypes: ['video'], create: (env) => createRemotionRenderer({ projectDir: remotionProjectDir(env.paths.home) }), checks: REMOTION_CHECKS },
   hyperframes: {
     label: 'HyperFrames (HTML + GSAP, Apache-2.0)', outputTypes: ['video'], checks: HYPERFRAMES_CHECKS,

@@ -41,3 +41,8 @@ import { hyperframesCacheRoot } from '../../src/providers/hyperframes/checks.ts'
 const hyperframesHome = process.env.EXPLAINER_HOME ?? join(tmpdir(), 'rocket-explainer-live');
 rendererContract('hyperframes', () => createHyperFramesRenderer({ cacheRoot: hyperframesCacheRoot(hyperframesHome) }),
   { outputType: 'video', expectExt: ['.mp4'], skip: liveSkip, timeout: 1_800_000 });
+
+import { createFakeDocumentRenderer } from '../../src/providers/fake/renderer.ts';
+rendererContract('fake', () => createFakeDocumentRenderer(), { outputType: 'deck', expectExt: ['.html', '.pptx'] });
+rendererContract('fake', () => createFakeDocumentRenderer(), { outputType: 'doc', expectExt: ['.pdf', '.md'] });
+rendererContract('fake', () => createFakeDocumentRenderer(), { outputType: 'visual', expectExt: ['.png', '.html'] });

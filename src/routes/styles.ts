@@ -5,6 +5,7 @@ import { ConflictError } from '../jobs.ts';
 import { runStyleSample } from '../pipeline/style-sample.ts';
 import type { VoiceChoice } from '../style/store.ts';
 import { readdir } from 'node:fs/promises';
+import { OUTPUT_TYPES, type OutputType } from '../settings.ts';
 import { join } from 'node:path';
 import { readJson } from '../datadir.ts';
 import { styleNamesPrompt } from '../prompts/style.ts';
@@ -49,9 +50,13 @@ export function styleRoutes(app: App, router: Router) {
 
   router.get('/api/styles/:id', ({ params }) => store.get(params.id));
 
-  router.post('/api/styles/:id/sample', async ({ params }) => {
-    await store.meta(params.id);
-    return startJob(app, 'style-sample', `style:${params.id}`, (ctx) => runStyleSample(app, params.id, ctx, { comments: [], basedOn: null }));
+  // A first sample, or an on-demand sample of another output type (deck, doc, visual).
+  router.post('/api/styles/:id/sample', async ({ params, body }) => {
+    const meta = await store.meta(params.id);
+    const outputType = (body?.outputType ?? 'video') as OutputType;
+    if (!OUTPUT_TYPES.includes(outputType)) throw new HttpError(400, `unknown output type "${outputType}"`);
+    app.providers.renderer(outputType);
+    return startJob(app, `style-sample-${outputType}`, `style:${params.id}`, (ctx) => runStyleSample(app, params.id, ctx, { comments: [], basedOn: meta.currentRound, outputType }));
   });
 
   // Voice, model, effort and description changes apply to the next round.
@@ -86,7 +91,7 @@ export function styleRoutes(app: App, router: Router) {
     }
     const current = meta.currentRound ? (await store.rounds(params.id)).find((r) => r.n === meta.currentRound) : undefined;
     return startJob(app, 'style-sample', `style:${params.id}`, (ctx) =>
-      runStyleSample(app, params.id, ctx, { comments: current?.comments ?? [], basedOn: current?.n ?? null }));
+      runStyleSample(app, params.id, ctx, { comments: current?.comments ?? [], basedOn: current?.n ?? null, outputType: current?.outputType ?? 'video' }));
   });
 
   router.post('/api/styles/:id/revert', async ({ params, body }) => {

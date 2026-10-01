@@ -247,3 +247,11 @@ details[open] > summary { margin-bottom: 8px; }
 .rendered { color: var(--accent); margin: 8px 0 0; }
 .history-item { border-left: 2px solid var(--border-strong); padding-left: 12px; }
 .history-item ul { margin: 4px 0 0; padding-left: 18px; }
+.frame-box { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: #fff; }
+.output-frame { width: 100%; aspect-ratio: 16 / 9; border: 0; display: block; background: #fff; }
+.doc-frame { aspect-ratio: 8.5 / 11; max-height: 80vh; }
+.output-image { width: 100%; display: block; }
+.type-bar { display: flex; gap: 4px; }
+.type-tab { background: var(--sunken); border: 1px solid var(--border); color: var(--muted); border-radius: 999px; padding: 5px 14px; font: 500 13px var(--font); cursor: pointer; }
+.type-tab[aria-selected=true] { color: var(--text); border-color: var(--accent); background: var(--accent-soft); }
+.type-tab:disabled { opacity: .5; cursor: not-allowed; }

@@ -5,6 +5,7 @@ import { readJson, writeJson, writeFileAtomic } from '../datadir.ts';
 import { KeyedLock, newId } from '../lock.ts';
 import { designTemplate, palette } from './design.ts';
 import type { ScenePlan, VoiceControls, AgentUsage } from '../providers/types.ts';
+import type { OutputType } from '../settings.ts';
 
 export interface VoiceChoice { provider: string; voiceId: string; controls: VoiceControls }
 
@@ -24,6 +25,10 @@ export interface Round {
   comments: StyleComment[];
   /** The round these instructions were derived from. */
   basedOn: number | null;
+  /** Sample type; absent means video. */
+  outputType?: OutputType;
+  /** Sample files in the round dir, primary first; absent means ['sample.mp4']. */
+  files?: string[];
   usage?: AgentUsage;
 }
 
@@ -45,7 +50,7 @@ export interface StyleMeta {
 export interface StyleView extends StyleMeta {
   design: string;
   palette: [string, string][];
-  rounds: (Round & { designUrl: string; sampleUrl: string })[];
+  rounds: (Round & { outputType: OutputType; designUrl: string; sampleUrl: string; fileUrls: string[] })[];
 }
 
 export class StyleStore {
@@ -87,11 +92,11 @@ export class StyleStore {
   async get(id: string): Promise<StyleView> {
     const m = await this.meta(id);
     const design = await this.design(id);
-    const rounds = (await this.rounds(id)).map((r) => ({
-      ...r,
-      designUrl: `/media/styles/${id}/rounds/${r.n}/DESIGN.md`,
-      sampleUrl: `/media/styles/${id}/rounds/${r.n}/sample.mp4`,
-    }));
+    const rounds = (await this.rounds(id)).map((r) => {
+      const base = `/media/styles/${id}/rounds/${r.n}`;
+      const files = r.files ?? ['sample.mp4'];
+      return { ...r, outputType: r.outputType ?? 'video', designUrl: `${base}/DESIGN.md`, sampleUrl: `${base}/${files[0]}`, fileUrls: files.map((f) => `${base}/${f}`) };
+    });
     return { ...m, design, palette: palette(design), rounds };
   }
 
@@ -103,8 +108,9 @@ export class StyleStore {
       const m = await readJson<StyleMeta | null>(join(this.p.styles, id, 'style.json'), null);
       if (!m) continue;
       const design = await this.design(id).catch(() => '');
-      const rounds = (await this.rounds(id)).length;
-      out.push({ ...m, palette: palette(design), rounds, sampleUrl: m.currentRound ? `/media/styles/${id}/rounds/${m.currentRound}/sample.mp4` : null });
+      const all = await this.rounds(id);
+      const video = all.filter((r) => !r.outputType || r.outputType === 'video').at(-1);
+      out.push({ ...m, palette: palette(design), rounds: all.length, sampleUrl: video ? `/media/styles/${id}/rounds/${video.n}/sample.mp4` : null });
     }
     return out.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }

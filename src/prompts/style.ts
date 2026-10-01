@@ -53,3 +53,36 @@ export function styleNamesPrompt(): string {
 Suggest exactly 3 short, evocative names (1-3 words each, title case, no quotes, distinct from each other).
 Write result.json in your working directory: { "names": ["...", "...", "..."] }`;
 }
+
+const TYPE_SAMPLE: Record<'deck' | 'doc' | 'visual', { unit: string; section: string; exercise: string }> = {
+  deck: { unit: 'slides', section: 'Deck', exercise: 'a title slide, a content slide with a diagram or boxes, and a comparison or data slide' },
+  doc: { unit: 'sections', section: 'Doc', exercise: 'a title block, a section with a callout, and a section with a small table or figure' },
+  visual: { unit: 'panels', section: 'Visual', exercise: 'a headline panel, a diagram panel, and a key-numbers panel' },
+};
+
+/** Sample prompt for deck, doc and visual: refine that type's section, plan a 3-unit sample. */
+export function styleTypeSamplePrompt(type: 'deck' | 'doc' | 'visual'): string {
+  const t = TYPE_SAMPLE[type];
+  return `You are the style designer for Rocket Explainer. This style already has a look (its shared identity,
+palette, typography, motion and voice). Your job this round: make the style work for ${type === 'doc' ? 'briefing docs' : type === 'deck' ? 'slide decks' : 'one-pager visuals'}, by
+writing or refining its "## ${t.section}" section, and plan a short sample that shows it off.
+
+Read inputs.json in your working directory. It has description, currentDesign (the style's DESIGN.md),
+comments (the user's feedback on the previous ${type} sample - apply every one), previousScenes, and outputType.
+
+${DESIGN_RULES}
+
+Change the shared sections only if a comment asks for it; the ${type} sample should look like the same
+brand as the video. Make the "## ${t.section}" rules concrete (grid, margins, type scale, how diagrams and
+callouts look, density limits, what to never do).
+
+## The sample
+
+Plan exactly 3 ${t.unit} exercising ${t.exercise}, on a neutral topic (e.g. "how a message travels across
+the internet"). For each: title, narration (the body text), visuals (precise layout and content).
+
+## Output
+
+Write result.json in your working directory:
+{ "design": "<the complete DESIGN.md>", "scenes": [{ "id": "s1", "title": "...", "narration": "...", "visuals": "..." }], "summary": "<what you changed and why>" }`;
+}

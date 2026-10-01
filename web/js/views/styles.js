@@ -1,5 +1,11 @@
 import { h, toast, timeAgo, fmtMs, fmtTs } from '../dom.js';
 import { dialog } from '../components/dialog.js';
+import { viewers } from '../viewers/registry.js';
+import '../viewers/deck.js';
+import '../viewers/doc.js';
+import '../viewers/visual.js';
+
+const SAMPLE_TYPES = [{ id: 'video', label: 'Video' }, { id: 'deck', label: 'Deck' }, { id: 'doc', label: 'Doc' }, { id: 'visual', label: 'Visual' }];
 import { api } from '../api.js';
 import { navigate, registerRoute } from '../router.js';
 import { jobView } from '../components/job.js';
@@ -85,8 +91,23 @@ async function styleView(root, { id }) {
     const isCurrent = shown && current && shown.n === current.n;
 
     // ---- Player + job ----
-    const video = shown ? h('video.sample', { src: shown.sampleUrl, controls: true, preload: 'auto', playsInline: true }) : null;
-    const playerBox = h('div.player', video ?? h('div.placeholder', active[0] ? 'Rendering the first sample…' : 'No sample yet.'));
+    const shownType = shown?.outputType ?? 'video';
+    const video = shown && shownType === 'video' ? h('video.sample', { src: shown.sampleUrl, controls: true, preload: 'auto', playsInline: true }) : null;
+    const playerBox = video ? h('div.player', video)
+      : shown ? (viewers[shownType] ?? viewers.video)(shown).el
+      : h('div.player', h('div.placeholder', active[0] ? 'Rendering the first sample…' : 'No sample yet.'));
+    // Sample types: video first; deck/doc/visual samples render on demand and share the round history.
+    const typeBar = style.rounds.length ? h('div.type-bar', { role: 'tablist', 'aria-label': 'Sample type' }, SAMPLE_TYPES.map((t) => {
+      const latest = style.rounds.filter((r) => (r.outputType ?? 'video') === t.id).at(-1);
+      return h('button.type-tab', {
+        role: 'tab', 'aria-selected': String(shownType === t.id), disabled: !!active[0] && !latest,
+        onclick: async () => {
+          if (latest) { viewing = latest.n; load(); return; }
+          try { await api(`/api/styles/${id}/sample`, { method: 'POST', body: { outputType: t.id } }); viewing = null; load(); }
+          catch (err) { toast(err.message, 'error'); }
+        },
+      }, t.label, latest ? null : h('span.muted.small', ' · render sample'));
+    })) : null;
     const jobBox = h('div');
     const job = active[0] ?? (last && last.status !== 'succeeded' && (!current || last.createdAt > current.createdAt) ? last : null);
     if (job) {
@@ -204,6 +225,7 @@ async function styleView(root, { id }) {
           h('button.btn.danger', { onclick: () => remove(style) }, 'Delete'))),
       h('div.grid-2',
         h('div.stack',
+          typeBar,
           playerBox,
           !isCurrent && shown ? h('div.viewing-note', `Viewing round ${shown.n}. Comments go on the current round (${current?.n}).`) : null,
           jobBox,

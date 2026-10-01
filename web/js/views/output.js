@@ -2,21 +2,10 @@ import { h, toast, timeAgo, fmtMs, fmtTs } from '../dom.js';
 import { api } from '../api.js';
 import { workspaceExtensions, OUTPUT_TYPES } from './explainer.js';
 
-/**
- * Viewers per output type: (round) => { el, position?() -> { atMs } | { sceneId }, seek?(scene) }.
- * Other output types register here.
- */
-export const viewers = {
-  video(round) {
-    const video = h('video.output', { src: round.url, controls: true, preload: 'auto', playsInline: true });
-    return {
-      el: h('div.player', video),
-      position: () => ({ atMs: Math.round(video.currentTime * 1000) }),
-      seek: (s) => { video.currentTime = s.startMs / 1000 + 0.05; video.play().catch(() => {}); },
-      supportsTime: true,
-    };
-  },
-};
+import { viewers } from '../viewers/registry.js';
+import '../viewers/deck.js';
+import '../viewers/doc.js';
+import '../viewers/visual.js';
 
 const typeLabel = (t) => OUTPUT_TYPES.find((x) => x.id === t)?.label ?? t;
 
