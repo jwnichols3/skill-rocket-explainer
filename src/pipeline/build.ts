@@ -3,7 +3,7 @@ import { join, basename, extname } from 'node:path';
 import type { App } from '../app.ts';
 import type { JobCtx } from '../jobs.ts';
 import type { OutputType } from '../settings.ts';
-import type { Explainer, ScriptScene, OutputRound, Comment } from '../explainer/store.ts';
+import { ExplainerStore, type Explainer, type ScriptScene, type OutputRound, type Comment } from '../explainer/store.ts';
 import type { TimedScene } from '../providers/types.ts';
 import { scriptPrompt, revisePrompt } from '../prompts/explainer.ts';
 import { narrateScenes } from './narrate.ts';
@@ -43,7 +43,7 @@ export async function runBuild(app: App, id: string, type: OutputType, mode: 'bu
   const store = app.explainers;
   const e: Explainer = await store.get(id);
   if (!e.styleId) throw new Error('pick a style first');
-  const plan = e.plans.find((p) => p.n === e.approvedPlan)?.plan;
+  const plan = ExplainerStore.approved(e, type)?.plan;
   if (!plan) throw new Error('approve a plan first');
   const styleMeta = await app.styles.meta(e.styleId);
   const style = await app.styles.design(e.styleId);

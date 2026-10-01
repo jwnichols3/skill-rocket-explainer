@@ -245,3 +245,5 @@ details[open] > summary { margin-bottom: 8px; }
 .script-scene { border-top: 1px solid var(--border); padding-top: 10px; }
 .script-scene label { margin-top: 8px; }
 .rendered { color: var(--accent); margin: 8px 0 0; }
+.history-item { border-left: 2px solid var(--border-strong); padding-left: 12px; }
+.history-item ul { margin: 4px 0 0; padding-left: 18px; }

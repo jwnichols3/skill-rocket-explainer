@@ -13,7 +13,7 @@ export async function explainersView(root) {
           h('tbody', list.map((e) => h('tr',
             h('td', h('a', { href: `/explainers/${e.id}`, 'data-link': true }, e.title || 'Untitled explainer'), h('div.muted.small', e.brief)),
             h('td', e.styleId ? styleName[e.styleId] ?? 'deleted style' : '—'),
-            h('td', h('span.badge', e.outputType)),
+            h('td', e.outputTypes.length ? e.outputTypes.map((t) => h('span.badge', { style: { marginRight: '4px' } }, t)) : h('span.muted', '—')),
             h('td', h('span.badge', { class: e.status === 'approved' || e.status === 'built' ? 'ok' : '' }, e.status)),
             h('td.muted.small', timeAgo(e.updatedAt)))))))));
 }

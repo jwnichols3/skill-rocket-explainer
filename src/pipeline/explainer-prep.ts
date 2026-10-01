@@ -3,7 +3,7 @@ import { homedir } from 'node:os';
 import { stat } from 'node:fs/promises';
 import type { App } from '../app.ts';
 import type { JobCtx } from '../jobs.ts';
-import type { SourceReport, Plan } from '../explainer/store.ts';
+import { ExplainerStore, type SourceReport, type Plan } from '../explainer/store.ts';
 import { sourceReportPrompt, planPrompt } from '../prompts/explainer.ts';
 
 export const expandHome = (p: string) => (p === '~' || p.startsWith('~/') ? join(homedir(), p.slice(1)) : p);
@@ -76,7 +76,7 @@ export async function runPlan(app: App, id: string, ctx: JobCtx) {
   if (!e.report) throw new Error('run the source report first');
   if (!e.styleId) throw new Error('pick a style first');
   const style = await app.styles.design(e.styleId);
-  const previous = e.plans.at(-1);
+  const previous = ExplainerStore.latestPlan(e);
   ctx.stage(previous ? 'Revising the plan' : 'Planning', 0.1, `${e.model} · ${e.effort}`);
   const res = await surfaceFor(app, e.surface).run({
     kind: 'explainer-plan',
@@ -92,8 +92,8 @@ export async function runPlan(app: App, id: string, ctx: JobCtx) {
   if (problems.length) throw new Error(`the plan is invalid: ${problems.join('; ')}`);
   const plan = res.output as Plan;
   await app.explainers.update(id, (x) => {
-    x.plans.push({ n: (x.plans.at(-1)?.n ?? 0) + 1, plan, comments: [], createdAt: new Date().toISOString(), model: e.model, effort: e.effort });
-    x.status = 'planned';
-    x.approvedPlan = null;
+    x.plans.push({ n: (x.plans.at(-1)?.n ?? 0) + 1, outputType: e.outputType, plan, comments: [], createdAt: new Date().toISOString(), model: e.model, effort: e.effort });
+    if (x.status !== 'built') x.status = 'planned';
+    delete x.approvedPlans[e.outputType];
   });
 }

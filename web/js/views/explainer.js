@@ -1,4 +1,6 @@
-import { h, toast, timeAgo } from '../dom.js';
+import { h, toast, timeAgo, fmtTs } from '../dom.js';
+import { dialog } from '../components/dialog.js';
+import { navigate } from '../router.js';
 import { api } from '../api.js';
 import { registerRoute } from '../router.js';
 import { jobView } from '../components/job.js';
@@ -14,9 +16,8 @@ export const OUTPUT_TYPES = [
 const STEPS = ['Sources', 'Report', 'Choices', 'Plan', 'Build'];
 
 function stepIndex(e) {
-  if (e.status === 'built') return 4;
-  if (e.status === 'approved') return 4;
-  if (e.plans.length) return 3;
+  if (e.approvedPlan || e.outputs?.[e.outputType]) return 4;
+  if (e.plans.some((p) => p.outputType === e.outputType)) return 3;
   if (e.report) return e.styleId ? 3 : 2;
   return 1;
 }
@@ -49,12 +50,44 @@ async function explainerView(root, { id }) {
     const at = stepIndex(e);
     page.replaceChildren(
       h('div.crumbs', h('a', { href: '/explainers', 'data-link': true }, 'Explainers'), ' / ', e.title || 'Untitled explainer'),
-      h('header.page-head', h('div', h('h1', e.title || 'Untitled explainer'), h('p.muted', { style: { margin: 0 } }, e.brief))),
+      h('header.page-head', h('div', h('h1', e.title || 'Untitled explainer'), h('p.muted', { style: { margin: 0 } }, e.brief)),
+        h('div.actions', h('button.btn.danger', { disabled: busy, onclick: () => remove(e) }, 'Delete explainer'))),
       h('div.steps', STEPS.map((s, i) => h('span.step', { 'data-n': i + 1, class: i < at ? 'done' : i === at ? 'current' : '' }, s))),
       jobBox,
       h('div.grid-2',
         h('div.stack', ...workspaceExtensions.map((fn) => fn(ctx)), planPanel(ctx), reportPanel(ctx)),
-        h('div.stack', sourcesPanel(ctx), choicesPanel(ctx))));
+        h('div.stack', sourcesPanel(ctx), choicesPanel(ctx), historyPanel(ctx))));
+  }
+
+  async function remove(e) {
+    const ok = await dialog({
+      title: `Delete “${e.title || 'Untitled explainer'}”?`,
+      body: h('p', 'This removes its sources list, report, plans, rounds and rendered outputs from the app. Files you exported elsewhere stay.'),
+      actions: [{ label: 'Delete', value: true, kind: 'danger' }],
+    });
+    if (!ok) return;
+    try { await api(`/api/explainers/${id}`, { method: 'DELETE' }); toast('Explainer deleted'); navigate('/explainers'); }
+    catch (err) { toast(err.message, 'error'); }
+  }
+
+  /** Everything that happened, oldest first: sources, report, plan versions, output rounds, comments. */
+  function historyPanel({ e }) {
+    const items = [];
+    const commentList = (cs) => cs.length ? h('ul.small', cs.map((c) => h('li', c.atMs != null ? `${fmtTs(c.atMs)} ` : c.sceneId ? `[${c.sceneId}] ` : '', c.text))) : null;
+    items.push(h('div.history-item', h('strong', 'Sources'), h('ul.small', e.sources.map((s) => h('li', { style: { opacity: s.enabled ? 1 : 0.5 } }, `${s.kind}: ${s.value}`)))));
+    if (e.corrections.length) items.push(h('div.history-item', h('strong', 'Corrections'), commentList(e.corrections)));
+    if (e.report) items.push(h('div.history-item', h('strong', 'Source report'), h('span.muted.small', ` ${timeAgo(e.report.createdAt)}`)));
+    for (const p of e.plans) {
+      const approved = e.approvedPlans?.[p.outputType] === p.n;
+      items.push(h('div.history-item', h('strong', `Plan v${p.n} · ${p.outputType}${approved ? ' · approved' : ''}`), h('span.muted.small', ` ${p.model} · ${timeAgo(p.createdAt)}`), h('div.small', p.plan.title), commentList(p.comments)));
+    }
+    for (const [type, state] of Object.entries(e.outputs ?? {})) {
+      for (const r of state.rounds) {
+        items.push(h('div.history-item', h('strong', `${type[0].toUpperCase()}${type.slice(1)} round ${r.n}`), h('span.muted.small', ` ${r.model} · ${timeAgo(r.createdAt)}${r.basedOn ? ` · re-rendered ${r.rendered.join(', ')}` : ''}`),
+          h('div', h('a.small', { href: r.url, target: '_blank' }, 'Open file')), commentList(r.comments)));
+      }
+    }
+    return h('div.panel', h('details.history', h('summary', 'History'), h('div.stack', items)));
   }
 
   async function act(fn, ok) {
@@ -132,7 +165,7 @@ async function explainerView(root, { id }) {
   }
 
   function planPanel({ e, busy }) {
-    const latest = e.plans.at(-1);
+    const latest = e.plans.filter((x) => x.outputType === e.outputType).at(-1);
     const canPlan = e.report && e.styleId && !busy;
     if (!latest) {
       return h('div.panel.plan', h('div.panel-head', h('h2', 'Plan')),

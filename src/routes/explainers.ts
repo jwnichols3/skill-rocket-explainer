@@ -2,7 +2,7 @@ import type { App } from '../app.ts';
 import type { Router } from '../router.ts';
 import { HttpError } from '../router.ts';
 import { OUTPUT_TYPES, type OutputType } from '../settings.ts';
-import { normalizeSources, type Explainer, type Comment } from '../explainer/store.ts';
+import { normalizeSources, ExplainerStore, type Explainer, type Comment } from '../explainer/store.ts';
 import { newId } from '../lock.ts';
 import { runSourceReport, runPlan, expandHome } from '../pipeline/explainer-prep.ts';
 import { runBuild } from '../pipeline/build.ts';
@@ -33,7 +33,7 @@ export function explainerRoutes(app: App, router: Router) {
     return out;
   }
 
-  router.get('/api/explainers', () => store.list());
+  router.get('/api/explainers', async () => (await store.list()).map(withUrls));
 
   router.post('/api/explainers', async ({ body }) => {
     if (!body || typeof body !== 'object') throw new HttpError(400, 'expected an explainer');
@@ -107,9 +107,9 @@ export function explainerRoutes(app: App, router: Router) {
 
   router.post('/api/explainers/:id/approve', async ({ params }) => {
     const e = await store.get(params.id);
-    const latest = e.plans.at(-1);
+    const latest = ExplainerStore.latestPlan(e);
     if (!latest) throw new HttpError(400, 'there is no plan to approve yet');
-    return withUrls(await store.update(params.id, (x) => { x.approvedPlan = latest.n; if (x.status !== 'built') x.status = 'approved'; }));
+    return withUrls(await store.update(params.id, (x) => { x.approvedPlans[x.outputType] = latest.n; if (x.status !== 'built') x.status = 'approved'; }));
   });
 }
 
@@ -126,7 +126,7 @@ export function withUrls(e: Explainer) {
       }),
     };
   }
-  return { ...e, outputs };
+  return { ...e, outputs, outputTypes: Object.keys(e.outputs ?? {}), approvedPlan: e.approvedPlans?.[e.outputType] ?? null };
 }
 
 export function outputRoutes(app: App, router: Router) {
@@ -139,7 +139,7 @@ export function outputRoutes(app: App, router: Router) {
   router.post('/api/explainers/:id/outputs/:type/build', async ({ params }) => {
     const t = type(params.type);
     const e = await store.get(params.id);
-    if (!e.approvedPlan) throw new HttpError(400, 'approve a plan first');
+    if (!ExplainerStore.approved(e, t)) throw new HttpError(400, `approve a ${t} plan first`);
     if (!e.styleId) throw new HttpError(400, 'pick a style first');
     app.providers.renderer(t);
     return startJob(app, `build-${t}`, `explainer:${params.id}`, (ctx) => runBuild(app, params.id, t, 'build', ctx));

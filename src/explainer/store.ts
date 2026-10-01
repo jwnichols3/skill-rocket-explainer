@@ -37,7 +37,7 @@ export interface Plan {
 
 export interface Comment { id: string; text: string; createdAt: string; atMs?: number; sceneId?: string }
 
-export interface PlanVersion { n: number; plan: Plan; comments: Comment[]; createdAt: string; model: string; effort: string }
+export interface PlanVersion { n: number; outputType: OutputType; plan: Plan; comments: Comment[]; createdAt: string; model: string; effort: string }
 
 /** A scene of the final script: narration (or body text) and visual direction. */
 export interface ScriptScene { id: string; title: string; narration: string; visuals: string; purpose?: string }
@@ -88,7 +88,8 @@ export interface Explainer {
   status: ExplainerStatus;
   report: SourceReport | null;
   plans: PlanVersion[];
-  approvedPlan: number | null;
+  /** Approved plan per output type. */
+  approvedPlans: Partial<Record<OutputType, number>>;
   outputs: Partial<Record<OutputType, OutputState>>;
   createdAt: string;
   updatedAt: string;
@@ -121,9 +122,9 @@ export class ExplainerStore {
     return out.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }
 
-  async create(input: Omit<Explainer, 'id' | 'status' | 'report' | 'plans' | 'approvedPlan' | 'createdAt' | 'updatedAt' | 'corrections' | 'outputs'>): Promise<Explainer> {
+  async create(input: Omit<Explainer, 'id' | 'status' | 'report' | 'plans' | 'approvedPlans' | 'createdAt' | 'updatedAt' | 'corrections' | 'outputs'>): Promise<Explainer> {
     const now = new Date().toISOString();
-    const e: Explainer = { ...input, id: newId('ex_'), corrections: [], status: 'draft', report: null, plans: [], approvedPlan: null, outputs: {}, createdAt: now, updatedAt: now };
+    const e: Explainer = { ...input, id: newId('ex_'), corrections: [], status: 'draft', report: null, plans: [], approvedPlans: {}, outputs: {}, createdAt: now, updatedAt: now };
     await mkdir(this.dir(e.id), { recursive: true });
     await writeJson(join(this.dir(e.id), 'explainer.json'), e);
     return e;
@@ -141,6 +142,17 @@ export class ExplainerStore {
 
   roundDir(id: string, type: OutputType, n: number) {
     return join(this.dir(id), 'outputs', type, 'rounds', String(n));
+  }
+
+  /** Latest plan for an output type. */
+  static latestPlan(e: Explainer, type: OutputType = e.outputType): PlanVersion | undefined {
+    return e.plans.filter((p) => p.outputType === type).at(-1);
+  }
+
+  /** The approved plan for an output type. */
+  static approved(e: Explainer, type: OutputType = e.outputType): PlanVersion | undefined {
+    const n = e.approvedPlans[type];
+    return n ? e.plans.find((p) => p.n === n) : undefined;
   }
 
   async delete(id: string): Promise<void> {
