@@ -4,6 +4,7 @@ import type { AgentSurface, AgentTask, AgentRunOptions, AgentResult, AgentUsage,
 import type { CheckDef } from '../../doctor.ts';
 import { exec } from '../../media.ts';
 import { commandVersion } from '../../doctor.ts';
+import { fromIni } from '@aws-sdk/credential-providers';
 
 /**
  * Agent surface backed by headless Claude Code (`claude -p`). One factory, several
@@ -21,6 +22,13 @@ export interface ClaudeSurfaceConfig {
   bin?: string;
   /** Hard limit per run. */
   timeoutMs?: number;
+  /** Maps the app's model id to what `--model` gets; `{ error }` = this variant can't run it. Default: as is. */
+  model?: (id: string) => string | { error: string };
+  /** Extra messages that mean "not signed in" for this variant, and the fix appended to auth failures. */
+  authPattern?: RegExp;
+  authFix?: () => string;
+  /** Runs before the CLI starts; a message means "not signed in" (auth failure) and the run stops there. */
+  preflight?: () => Promise<string | null>;
 }
 
 export const DEFAULT_TOOLS = ['Read', 'Write', 'Edit', 'Glob', 'Grep'];
@@ -39,6 +47,61 @@ export const SUBSCRIPTION: ClaudeSurfaceConfig = {
   // Anything that would route the CLI to the API, Bedrock, Vertex or a proxy instead of the subscription.
   stripEnv: ['ANTHROPIC_*', 'AWS_*', 'CLAUDE_CODE_USE_*'],
 };
+
+export interface BedrockConfig { profile?: string; region: string; models: Record<string, string> }
+
+/** Values that already are Bedrock model ids: inference profile ids (`us.anthropic.…`), foundation model ids or ARNs. */
+const BEDROCK_ID = /^(arn:aws[\w-]*:bedrock:|([a-z-]+\.)?anthropic\.)/;
+
+/** Maps an app model id to a Bedrock inference profile per settings; ids that already are Bedrock ids pass through. */
+export function bedrockModel(b: BedrockConfig, id: string): string | { error: string } {
+  const mapped = b.models?.[id]?.trim();
+  if (mapped) return mapped;
+  if (BEDROCK_ID.test(id)) return id;
+  return { error: `model "${id}" has no Bedrock inference profile mapped; map it in Settings > Agent surfaces > Bedrock (use Discover), or pick another model or surface` };
+}
+
+export function bedrockAuthFix(b: { profile?: string }): string {
+  const p = b.profile || 'default';
+  return `run \`aws sso login --profile ${p}\` (or refresh that profile's keys); the profile is set in Settings > Agent surfaces > Bedrock`;
+}
+
+/** Messages from Claude Code / the AWS SDK that mean the AWS credentials are missing or expired. */
+const AWS_AUTH = /sso session|token (has )?expired|expiredtoken|could not load credentials|unable to locate credentials|credentials? (are|is) (missing|expired|invalid)|unrecognizedclient|security token included in the request is (invalid|expired)|aws authentication failed|session token not found|invalidclienttokenid|refresh failed/i;
+
+/**
+ * Claude Code on Amazon Bedrock with the AWS profile and region from settings. The
+ * subscription's account vars and any inherited AWS credentials/profile are dropped, then
+ * CLAUDE_CODE_USE_BEDROCK, AWS_PROFILE and AWS_REGION are set. AWS_CONFIG_FILE and
+ * AWS_SHARED_CREDENTIALS_FILE are kept so non-default config paths keep working.
+ */
+export function bedrockSurfaceConfig(bedrock: () => BedrockConfig): ClaudeSurfaceConfig {
+  return {
+    id: 'claude-bedrock',
+    label: 'Claude Code on Amazon Bedrock',
+    stripEnv: ['ANTHROPIC_*', 'CLAUDE_CODE_USE_*', 'CLAUDE_CODE_OAUTH_TOKEN', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_SESSION_TOKEN',
+      'AWS_BEARER_TOKEN_BEDROCK', 'AWS_PROFILE', 'AWS_DEFAULT_PROFILE', 'AWS_REGION', 'AWS_DEFAULT_REGION'],
+    env: () => {
+      const b = bedrock();
+      return { CLAUDE_CODE_USE_BEDROCK: '1', AWS_REGION: b.region, ...(b.profile ? { AWS_PROFILE: b.profile } : {}) };
+    },
+    model: (id) => bedrockModel(bedrock(), id),
+    authPattern: AWS_AUTH,
+    authFix: () => bedrockAuthFix(bedrock()),
+    // Claude Code retries credential errors for a long time; resolving them first fails fast instead.
+    preflight: () => awsCredentialsError(bedrock().profile),
+  };
+}
+
+/** Resolves the profile's credentials (SSO, role, process, keys); returns the error message, or null when usable. */
+export async function awsCredentialsError(profile?: string): Promise<string | null> {
+  try {
+    await fromIni({ profile: profile || 'default' })();
+    return null;
+  } catch (err: any) {
+    return `AWS credentials for profile ${profile || 'default'} are not usable: ${err?.message ?? err}`;
+  }
+}
 
 export function childEnv(cfg: ClaudeSurfaceConfig, base: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
   const strip = cfg.stripEnv ?? [];
@@ -130,6 +193,10 @@ export function createClaudeSurface(cfg: ClaudeSurfaceConfig): AgentSurface {
     async run(task: AgentTask, opts: AgentRunOptions): Promise<AgentResult> {
       const fail = (kind: AgentFailureKind, message: string, usage?: AgentUsage): AgentResult => ({ ok: false, error: { kind, message }, usage });
       if (opts.signal?.aborted) return fail('cancelled', 'cancelled before start');
+      const model = cfg.model ? cfg.model(opts.model) : opts.model;
+      if (typeof model !== 'string') return fail('unavailable', model.error);
+      const signedOut = await cfg.preflight?.();
+      if (signedOut) return fail('auth', cfg.authFix ? `${signedOut}. Fix: ${cfg.authFix()}` : signedOut);
       const workdir = resolve(opts.workdir);
       try {
         await mkdir(workdir, { recursive: true });
@@ -151,7 +218,7 @@ export function createClaudeSurface(cfg: ClaudeSurfaceConfig): AgentSurface {
       const pluginDirs = (await exists(join(workdir, '.claude', 'skills'))) ? [join(workdir, '.claude')] : [];
 
       let result: any = null;
-      const r = await exec(bin, claudeArgs(task, opts, pluginDirs), {
+      const r = await exec(bin, claudeArgs(task, { ...opts, model }, pluginDirs), {
         cwd: workdir,
         env: childEnv(cfg),
         signal: ctl.signal,
@@ -171,7 +238,8 @@ export function createClaudeSurface(cfg: ClaudeSurfaceConfig): AgentSurface {
       if (r.code === 127) return fail('unavailable', `the "${bin}" CLI was not found; install Claude Code: https://docs.claude.com/claude-code`);
       if (!result || result.is_error || r.code !== 0) {
         const msg = (result?.is_error ? String(result.result ?? result.subtype ?? '') : '') || tail(r.stderr) || `claude exited with code ${r.code}`;
-        return fail(failureKind(msg), msg, usage);
+        const kind = cfg.authPattern?.test(msg) ? 'auth' : failureKind(msg);
+        return fail(kind, kind === 'auth' && cfg.authFix ? `${msg}. Fix: ${cfg.authFix()}` : msg, usage);
       }
 
       for (const f of task.expectFiles ?? []) {

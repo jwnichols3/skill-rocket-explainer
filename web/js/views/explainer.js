@@ -29,7 +29,7 @@ async function explainerView(root, { id }) {
   let stopJob = null;
   const page = h('section.page');
   root.append(page);
-  const [{ settings }, styles] = await Promise.all([api('/api/settings'), api('/api/styles')]);
+  const [{ settings, available }, styles] = await Promise.all([api('/api/settings'), api('/api/styles')]);
 
   async function load() {
     stopJob?.();
@@ -37,7 +37,7 @@ async function explainerView(root, { id }) {
     const [e, active] = await Promise.all([api(`/api/explainers/${id}`), api(`/api/jobs?target=explainer:${id}&active=1`)]);
     const last = active[0] ? null : (await api(`/api/jobs?target=explainer:${id}`))[0];
     const busy = !!active[0];
-    const ctx = { e, busy, reload: load, settings, styles };
+    const ctx = { e, busy, reload: load, settings, styles, surfaces: available.agent };
 
     const jobBox = h('div');
     const job = active[0] ?? (last && last.status === 'failed' && last.createdAt > e.updatedAt ? last : null);
@@ -146,13 +146,15 @@ async function explainerView(root, { id }) {
       r.gaps.length ? h('div.callout.warn', { style: { marginTop: '12px' } }, h('strong', 'Gaps: '), r.gaps.join(' · ')) : null);
   }
 
-  function choicesPanel({ e, busy, settings, styles }) {
+  function choicesPanel({ e, busy, settings, styles, surfaces }) {
     const put = (body) => act(() => api(`/api/explainers/${id}`, { method: 'PUT', body }));
     const styleSel = h('select', { id: 'ex-style', disabled: busy, onchange: () => put({ styleId: styleSel.value || null }) },
       h('option', { value: '' }, styles.length ? 'Pick a style…' : 'No styles yet'),
       styles.map((s) => h('option', { value: s.id, selected: s.id === e.styleId }, s.name ?? 'Untitled style')));
     const model = h('select', { id: 'ex-model', disabled: busy, onchange: () => put({ model: model.value }) }, settings.models.map((m) => h('option', { value: m.id, selected: m.id === e.model }, m.label)));
     const effort = h('select', { id: 'ex-effort', disabled: busy, onchange: () => put({ effort: effort.value }) }, settings.efforts.map((x) => h('option', { value: x, selected: x === e.effort }, x)));
+    const surface = h('select', { id: 'ex-surface', disabled: busy, onchange: () => put({ surface: surface.value }) },
+      surfaces.map((s) => h('option', { value: s.id, selected: s.id === (e.surface || settings.providers.agent) }, s.label)));
     return h('div.panel',
       h('h2', 'Choices'),
       h('div.field', h('label', { for: 'ex-style' }, 'Style'), styleSel, h('div.hint', h('a', { href: '/styles/new', 'data-link': true }, 'Define a new style'))),
@@ -161,7 +163,8 @@ async function explainerView(root, { id }) {
         h('span', h('strong', t.label), h('span.muted.small', t.blurb)))))),
       h('div.row', { style: { alignItems: 'flex-start' } },
         h('div.field', { style: { flex: 2 } }, h('label', { for: 'ex-model' }, 'Model'), model),
-        h('div.field', { style: { flex: 1 } }, h('label', { for: 'ex-effort' }, 'Effort'), effort)));
+        h('div.field', { style: { flex: 1 } }, h('label', { for: 'ex-effort' }, 'Effort'), effort)),
+      h('div.field', h('label', { for: 'ex-surface' }, 'Runs on'), surface, h('div.hint', 'Where the agent runs for this explainer. Keep sensitive sources on a narrower surface.')));
   }
 
   function planPanel({ e, busy }) {
