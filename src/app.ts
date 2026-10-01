@@ -1,7 +1,7 @@
 import { appendFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Paths } from './datadir.ts';
-import { loadSettings, saveSettings, type Settings } from './settings.ts';
+import { loadSettings, saveSettings, merge, validateSettings, type Settings } from './settings.ts';
 import { Router, HttpError } from './router.ts';
 import { Providers, validateProviders, AGENT_SURFACES, TTS_PROVIDERS, RENDERERS } from './providers/registry.ts';
 import { VERSION } from './version.ts';
@@ -10,6 +10,7 @@ import { StyleStore } from './style/store.ts';
 import { coreRoutes } from './routes/core.ts';
 import { styleRoutes } from './routes/styles.ts';
 import { explainerRoutes, outputRoutes } from './routes/explainers.ts';
+import { bedrockRoutes } from './routes/bedrock.ts';
 import { ExplainerStore } from './explainer/store.ts';
 import './providers/fake/responders.ts';
 
@@ -49,6 +50,7 @@ export async function createApp(paths: Paths, router: Router): Promise<App> {
   styleRoutes(app, router);
   explainerRoutes(app, router);
   outputRoutes(app, router);
+  bedrockRoutes(app, router);
 
   router.get('/api/status', () => ({
     app: 'rocket-explainer',
@@ -70,6 +72,8 @@ export async function createApp(paths: Paths, router: Router): Promise<App> {
     if (!body || typeof body !== 'object') throw new HttpError(400, 'expected a settings object');
     const bad = validateProviders(body.providers);
     if (bad) throw new HttpError(400, bad);
+    const invalid = validateSettings(merge(settings, body));
+    if (invalid) throw new HttpError(400, invalid);
     settings = await saveSettings(paths, body);
     providers.reset();
     for (const fn of listeners) fn(settings);

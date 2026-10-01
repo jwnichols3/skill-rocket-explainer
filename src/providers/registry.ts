@@ -6,7 +6,8 @@ import { createFakeAgent } from './fake/agent.ts';
 import { createFakeTts } from './fake/tts.ts';
 import { createFakeVideoRenderer } from './fake/renderer.ts';
 import { createPollyTts, pollyChecks } from './polly/tts.ts';
-import { createClaudeSurface, claudeChecks, SUBSCRIPTION } from './claude/agent.ts';
+import { createClaudeSurface, claudeChecks, SUBSCRIPTION, bedrockSurfaceConfig } from './claude/agent.ts';
+import { BEDROCK_CHECKS } from './claude/bedrock.ts';
 import { createRemotionRenderer } from './remotion/renderer.ts';
 import { remotionProjectDir } from './remotion/project.ts';
 import { REMOTION_CHECKS } from './remotion/checks.ts';
@@ -26,6 +27,10 @@ type Factory<T> = {
 export const AGENT_SURFACES: Record<string, Factory<AgentSurface>> = {
   fake: { label: 'Fake agent (tests)', create: (env) => createFakeAgent(() => env.settings().fake ?? {}) },
   'claude-subscription': { label: SUBSCRIPTION.label, create: () => createClaudeSurface(SUBSCRIPTION), checks: claudeChecks(SUBSCRIPTION, { subscription: true }) },
+  'claude-bedrock': {
+    label: 'Claude Code on Amazon Bedrock', create: (env) => createClaudeSurface(bedrockSurfaceConfig(() => env.settings().bedrock)),
+    checks: [...claudeChecks(bedrockSurfaceConfig(() => ({ region: '', models: {} }))), ...BEDROCK_CHECKS],
+  },
 };
 
 export const TTS_PROVIDERS: Record<string, Factory<TtsProvider>> = {
