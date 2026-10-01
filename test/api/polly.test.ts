@@ -40,7 +40,7 @@ test('SSML carries only supported controls, clamped and escaped', () => {
 });
 
 test('doctor runs a Polly check only when Polly is selected, and the fix names the configured profile', () => {
-  const fake = DEFAULT_SETTINGS;
+  const fake = merge(DEFAULT_SETTINGS, { providers: { agent: 'fake', tts: 'fake' } });
   const polly = merge(DEFAULT_SETTINGS, { providers: { tts: 'polly' }, polly: { profile: 'some-profile' } });
   assert.ok(!providerChecks(fake).some((c) => c.id === 'polly-credentials'));
   assert.ok(providerChecks(polly).some((c) => c.id === 'polly-credentials'));

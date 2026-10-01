@@ -197,10 +197,10 @@ test('bedrock child env: Bedrock on with the chosen profile/region; API keys and
 const NO_PATHS = {} as import('../../src/datadir.ts').Paths;
 
 test('doctor: Bedrock checks only when it is the agent surface; the mapping check needs the default model mapped', async () => {
-  const fake = DEFAULT_SETTINGS;
+  const fake = merge(DEFAULT_SETTINGS, { providers: { agent: 'fake', tts: 'fake' } });
   const bed = merge(DEFAULT_SETTINGS, { providers: { agent: 'claude-bedrock' }, bedrock: { profile: 'sandbox' } });
   assert.ok(!providerChecks(fake).some((c) => c.id.startsWith('claude-bedrock')));
-  assert.deepEqual(providerChecks(bed).map((c) => c.id), ['claude-bedrock-cli', 'claude-bedrock-credentials', 'claude-bedrock-model']);
+  assert.deepEqual(providerChecks(bed).map((c) => c.id).filter((id) => id.startsWith('claude-bedrock')), ['claude-bedrock-cli', 'claude-bedrock-credentials', 'claude-bedrock-model']);
   const mapping = BEDROCK_CHECKS.find((c) => c.id === 'claude-bedrock-model')!;
   assert.equal((await mapping.run(bed, NO_PATHS)).ok, false);
   assert.equal((await mapping.run(merge(bed, { bedrock: { models: { 'claude-opus-5-5': 'us.anthropic.claude-opus-5-5' } } }), NO_PATHS)).ok, true);
