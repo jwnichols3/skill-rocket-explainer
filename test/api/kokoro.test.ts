@@ -39,7 +39,7 @@ test('doctor reports Kokoro missing with an install fix (and uv first when uv is
   const PATH = process.env.PATH;
   process.env.PATH = await mkdtemp(join(tmpdir(), 'empty-path-'));
   try {
-    const r = await check.run(DEFAULT_SETTINGS);
+    const r = await check.run(DEFAULT_SETTINGS, { home } as any);
     assert.equal(r.ok, false);
     assert.match(r.detail, /not installed/);
     assert.match(r.fix!, /install uv/);

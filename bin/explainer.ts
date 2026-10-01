@@ -105,7 +105,7 @@ switch (cmd) {
     process.exit(info ? 0 : 1);
   }
   case 'doctor': {
-    const checks = await runChecks(await loadSettings(p));
+    const checks = await runChecks(await loadSettings(p), p);
     console.log(formatChecks(checks));
     process.exit(checks.some((c) => !c.ok && !c.optional) ? 1 : 0);
   }

@@ -1,7 +1,6 @@
 import { join } from 'node:path';
 import type { CheckDef } from '../../doctor.ts';
 import { commandVersion } from '../../doctor.ts';
-import { defaultHome } from '../../datadir.ts';
 import { exec } from '../../media.ts';
 import { HYPERFRAMES_VERSION, hyperframesEnv, isInstalled, toolchainAt, toolchainDir } from './toolchain.ts';
 
@@ -15,23 +14,23 @@ const setupCmd = `node ${join(import.meta.dirname, 'setup.ts')}`;
 export const HYPERFRAMES_CHECKS: CheckDef[] = [
   {
     id: 'hyperframes-npm', label: 'npm (installs HyperFrames)',
-    async run() {
+    async run(_s, p) {
       const v = await commandVersion('npm');
       return v ? { ok: true, detail: v } : { ok: false, detail: 'missing', fix: 'npm ships with Node.js: reinstall Node.js 24+ (https://nodejs.org)' };
     },
   },
   {
     id: 'hyperframes-toolchain', label: `HyperFrames ${HYPERFRAMES_VERSION} toolchain`, optional: true,
-    async run() {
-      const root = hyperframesCacheRoot(defaultHome());
+    async run(_s, p) {
+      const root = hyperframesCacheRoot(p.home);
       if (await isInstalled(root)) return { ok: true, detail: toolchainDir(root) };
       return { ok: false, detail: `not installed yet in ${toolchainDir(root)} (installs automatically on the first HyperFrames render)`, fix: `install now: ${setupCmd}` };
     },
   },
   {
     id: 'hyperframes-browser', label: 'Chrome for HyperFrames rendering',
-    async run() {
-      const root = hyperframesCacheRoot(defaultHome());
+    async run(_s, p) {
+      const root = hyperframesCacheRoot(p.home);
       if (!(await isInstalled(root))) return { ok: false, detail: 'unknown until the HyperFrames toolchain is installed', fix: `install it: ${setupCmd}` };
       const tc = toolchainAt(toolchainDir(root));
       const r = await exec(process.execPath, [tc.cli, 'browser', 'path'], { env: hyperframesEnv(), timeoutMs: 30_000 });

@@ -94,16 +94,16 @@ test('doctor: ElevenLabs check runs only when selected; reports missing, accepte
   assert.ok(providerChecks(merge(DEFAULT_SETTINGS, { providers: { tts: 'elevenlabs' } })).some((c) => c.id === 'elevenlabs-key'));
 
   const p = await ensureDataDir(await mkdtemp(join(tmpdir(), 'el-doctor-')));
-  const [check] = elevenLabsChecks({ paths: () => p, baseUrl: mock.url });
-  const missing = await check.run(DEFAULT_SETTINGS);
+  const [check] = elevenLabsChecks({ baseUrl: mock.url });
+  const missing = await check.run(DEFAULT_SETTINGS, p);
   assert.equal(missing.ok, false);
   assert.match(missing.fix!, /Settings > Voice providers/);
 
   await setSecret(p, 'elevenlabs', 'apiKey', KEY);
-  assert.equal((await check.run(DEFAULT_SETTINGS)).ok, true);
+  assert.equal((await check.run(DEFAULT_SETTINGS, p)).ok, true);
 
   await setSecret(p, 'elevenlabs', 'apiKey', 'nope-secret-value');
-  const rejected = await check.run(DEFAULT_SETTINGS);
+  const rejected = await check.run(DEFAULT_SETTINGS, p);
   assert.equal(rejected.ok, false);
   assert.match(rejected.detail, /rejected/);
   assert.ok(!JSON.stringify(rejected).includes('nope-secret-value'));

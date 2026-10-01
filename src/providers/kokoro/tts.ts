@@ -6,7 +6,7 @@ import type { TtsProvider, Voice, TtsCapabilities, Narration, ControlRange, Word
 import type { CheckDef } from '../../doctor.ts';
 import { commandVersion } from '../../doctor.ts';
 import { ffmpeg, probeDurationMs } from '../../media.ts';
-import { defaultHome, paths as dataPaths, type Paths } from '../../datadir.ts';
+import type { Paths } from '../../datadir.ts';
 import { kokoroLayout, kokoroInstalled, INSTALL_COMMAND, type KokoroLayout } from './install.ts';
 
 // Runtime choice and footprint: see install.ts.
@@ -174,12 +174,12 @@ export function createKokoroTts(p: Pick<Paths, 'home'>): TtsProvider {
 }
 
 /** Doctor: the venv and model are installed; if not, the fix says how (and to get uv first when missing). */
-export function kokoroCheck(layout: () => KokoroLayout): CheckDef {
+export function kokoroCheck(layout: (p: Paths) => KokoroLayout): CheckDef {
   return {
     id: 'kokoro',
     label: 'Kokoro local TTS',
-    async run() {
-      const l = layout();
+    async run(_s, p) {
+      const l = layout(p);
       const s = await kokoroInstalled(l);
       if (s.ok) return s;
       const uv = await commandVersion('uv');
@@ -189,4 +189,4 @@ export function kokoroCheck(layout: () => KokoroLayout): CheckDef {
   };
 }
 
-export const kokoroChecks: CheckDef[] = [kokoroCheck(() => kokoroLayout(dataPaths(defaultHome())))];
+export const kokoroChecks: CheckDef[] = [kokoroCheck((p) => kokoroLayout(p))];

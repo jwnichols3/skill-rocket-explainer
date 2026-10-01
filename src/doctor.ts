@@ -1,5 +1,6 @@
 import { exec } from './media.ts';
 import type { Settings } from './settings.ts';
+import type { Paths } from './datadir.ts';
 
 export interface Check {
   id: string;
@@ -19,7 +20,8 @@ export interface CheckDef {
   optional?: boolean;
   /** Only run when this returns true for the current settings. */
   when?: (s: Settings) => boolean;
-  run: (s: Settings) => Promise<Omit<Check, 'id' | 'label' | 'optional'>>;
+  /** Gets the settings and the data dir the app (or CLI) is running against. */
+  run: (s: Settings, p: Paths) => Promise<Omit<Check, 'id' | 'label' | 'optional'>>;
 }
 
 /** Checks a command exists by running it with a version flag; returns the first output line. */
@@ -56,13 +58,13 @@ const BASE_CHECKS: CheckDef[] = [
 export const CHECKS: CheckDef[] = [...BASE_CHECKS];
 
 /** Base checks plus those contributed by the selected providers (see providers/registry.ts). */
-export async function runChecks(settings: Settings, defs?: CheckDef[]): Promise<Check[]> {
+export async function runChecks(settings: Settings, paths: Paths, defs?: CheckDef[]): Promise<Check[]> {
   const { providerChecks } = await import('./providers/registry.ts');
   const all = defs ?? [...CHECKS, ...providerChecks(settings)];
   const active = all.filter((d) => !d.when || d.when(settings));
   return Promise.all(active.map(async (d) => {
     try {
-      return { id: d.id, label: d.label, optional: d.optional, ...(await d.run(settings)) };
+      return { id: d.id, label: d.label, optional: d.optional, ...(await d.run(settings, paths)) };
     } catch (err: any) {
       return { id: d.id, label: d.label, optional: d.optional, ok: false, detail: String(err?.message ?? err), fix: 'see logs' };
     }

@@ -2,7 +2,7 @@ import { writeFile, rm } from 'node:fs/promises';
 import { extname } from 'node:path';
 import type { TtsProvider, Voice, TtsCapabilities, Narration, ControlRange, WordTiming } from '../types.ts';
 import type { CheckDef } from '../../doctor.ts';
-import { defaultHome, paths as dataPaths } from '../../datadir.ts';
+
 import { getSecret } from '../../secrets.ts';
 import { ffmpeg, probeDurationMs } from '../../media.ts';
 
@@ -175,15 +175,14 @@ export function createElevenLabsTts(opts: ElevenLabsOptions): TtsProvider {
 
 /**
  * Doctor: the key is present, and ElevenLabs accepts it (a cheap GET /v1/voices).
- * Doctor runs from the CLI with only settings, so the data dir comes from the same place the CLI uses.
  */
-export function elevenLabsChecks(deps: { paths?: () => ReturnType<typeof dataPaths>; fetch?: typeof fetch; baseUrl?: string } = {}): CheckDef[] {
-  const where = deps.paths ?? (() => dataPaths(defaultHome()));
+export function elevenLabsChecks(deps: { fetch?: typeof fetch; baseUrl?: string } = {}): CheckDef[] {
+
   return [{
     id: 'elevenlabs-key',
     label: 'ElevenLabs API key',
-    async run() {
-      const key = await getSecret(where(), PROVIDER_ID, 'apiKey');
+    async run(_s, p) {
+      const key = await getSecret(p, PROVIDER_ID, 'apiKey');
       if (!key) return { ok: false, detail: 'not set', fix: KEY_FIX };
       try {
         await request({ apiKey: async () => key, fetch: deps.fetch, baseUrl: deps.baseUrl }, '/v1/voices', { signal: AbortSignal.timeout(15_000) });
