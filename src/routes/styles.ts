@@ -4,6 +4,10 @@ import { HttpError } from '../router.ts';
 import { ConflictError } from '../jobs.ts';
 import { runStyleSample } from '../pipeline/style-sample.ts';
 import type { VoiceChoice } from '../style/store.ts';
+import { readdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import { readJson } from '../datadir.ts';
+import { styleNamesPrompt } from '../prompts/style.ts';
 
 export function parseVoice(app: App, v: any): VoiceChoice {
   const provider = typeof v?.provider === 'string' ? v.provider : app.settings().providers.tts;
@@ -47,6 +51,94 @@ export function styleRoutes(app: App, router: Router) {
 
   router.post('/api/styles/:id/sample', async ({ params }) => {
     await store.meta(params.id);
-    return startJob(app, 'style-sample', `style:${params.id}`, (ctx) => runStyleSample(app, params.id, ctx, { comments: [], priorComments: [], basedOn: null }));
+    return startJob(app, 'style-sample', `style:${params.id}`, (ctx) => runStyleSample(app, params.id, ctx, { comments: [], basedOn: null }));
   });
+
+  // Voice, model, effort and description changes apply to the next round.
+  router.put('/api/styles/:id', async ({ params, body }) => {
+    const patch: Record<string, unknown> = {};
+    if (body?.voice) patch.voice = parseVoice(app, body.voice);
+    if (body?.model || body?.effort) Object.assign(patch, pickModel(app, { ...(await store.meta(params.id)), ...body }));
+    if (typeof body?.description === 'string' && body.description.trim()) patch.description = body.description.trim();
+    await store.update(params.id, (m) => { Object.assign(m, patch); });
+    return store.get(params.id);
+  });
+
+  router.post('/api/styles/:id/rounds/:n/comments', async ({ params, body }) => {
+    if (typeof body?.text !== 'string' || !body.text.trim()) throw new HttpError(400, 'comment text is required');
+    const atMs = typeof body.atMs === 'number' && body.atMs >= 0 ? Math.round(body.atMs) : undefined;
+    return store.addComment(params.id, Number(params.n), body.text.trim(), atMs);
+  });
+
+  router.del('/api/styles/:id/rounds/:n/comments/:cid', async ({ params }) => {
+    await store.removeComment(params.id, Number(params.n), params.cid);
+    return { ok: true };
+  });
+
+  // Next round: the current round's comments refine the current instructions.
+  router.post('/api/styles/:id/rerender', async ({ params, body }) => {
+    const meta = await store.meta(params.id);
+    if (body?.voice || body?.model || body?.effort) {
+      const patch: Record<string, unknown> = {};
+      if (body.voice) patch.voice = parseVoice(app, body.voice);
+      if (body.model || body.effort) Object.assign(patch, pickModel(app, { ...meta, ...body }));
+      await store.update(params.id, (m) => { Object.assign(m, patch); });
+    }
+    const current = meta.currentRound ? (await store.rounds(params.id)).find((r) => r.n === meta.currentRound) : undefined;
+    return startJob(app, 'style-sample', `style:${params.id}`, (ctx) =>
+      runStyleSample(app, params.id, ctx, { comments: current?.comments ?? [], basedOn: current?.n ?? null }));
+  });
+
+  router.post('/api/styles/:id/revert', async ({ params, body }) => {
+    if (app.jobs.active(`style:${params.id}`)) throw new HttpError(409, 'wait for the running job to finish');
+    await store.revert(params.id, Number(body?.round));
+    return store.get(params.id);
+  });
+
+  router.post('/api/styles/:id/name-suggestions', async ({ params }) => {
+    const meta = await store.meta(params.id);
+    const res = await app.providers.agent().run({
+      kind: 'style-names', prompt: styleNamesPrompt(),
+      inputs: { description: meta.description, design: await store.design(params.id) }, resultFile: 'result.json',
+    }, { workdir: join(app.paths.home, 'work', `names-${params.id}-${Date.now()}`), model: meta.model, effort: 'low' });
+    if (!res.ok) throw new HttpError(502, `name suggestions failed: ${res.error.message}`);
+    const names = (Array.isArray(res.output?.names) ? res.output.names : []).filter((n: unknown) => typeof n === 'string' && n.trim()).slice(0, 3);
+    if (names.length < 2) throw new HttpError(502, 'the agent did not suggest enough names');
+    return { names };
+  });
+
+  router.post('/api/styles/:id/save', async ({ params, body }) => {
+    const name = typeof body?.name === 'string' && body.name.trim() ? body.name.trim() : (await store.meta(params.id)).name;
+    if (!name) throw new HttpError(400, 'a name is required to save');
+    await store.update(params.id, (m) => { m.name = name; m.savedAt = new Date().toISOString(); });
+    return store.get(params.id);
+  });
+
+  router.post('/api/styles/:id/clone', async ({ params, body }) => {
+    const copy = await store.clone(params.id, body?.name);
+    return store.get(copy.id);
+  });
+
+  router.del('/api/styles/:id', async ({ params, url }) => {
+    await store.meta(params.id);
+    if (app.jobs.active(`style:${params.id}`)) throw new HttpError(409, 'wait for the running job to finish');
+    const usedBy = await explainersUsingStyle(app, params.id);
+    if (usedBy.length && url.searchParams.get('force') !== '1') {
+      throw new HttpError(409, `${usedBy.length} explainer(s) use this style`, { usedBy });
+    }
+    await store.delete(params.id);
+    return { ok: true };
+  });
+}
+
+/** Explainers whose explainer.json names this style. */
+export async function explainersUsingStyle(app: App, styleId: string): Promise<{ id: string; title: string }[]> {
+  let ids: string[] = [];
+  try { ids = await readdir(app.paths.explainers); } catch {}
+  const out = [];
+  for (const id of ids) {
+    const e = await readJson<any>(join(app.paths.explainers, id, 'explainer.json'), null);
+    if (e?.styleId === styleId) out.push({ id: e.id, title: e.title });
+  }
+  return out;
 }

@@ -25,7 +25,7 @@ export function validateScenes(scenes: unknown): string[] {
  * One round of the style loop: the agent writes/refines the style and plans a ~10 s sample,
  * TTS narrates it, the video renderer renders it, and the result becomes the style's new round.
  */
-export async function runStyleSample(app: App, styleId: string, ctx: JobCtx, opts: { comments: StyleComment[]; priorComments: StyleComment[]; basedOn: number | null }) {
+export async function runStyleSample(app: App, styleId: string, ctx: JobCtx, opts: { comments: StyleComment[]; basedOn: number | null }) {
   const store = app.styles;
   const meta = await store.meta(styleId);
   const currentDesign = await store.design(styleId);
@@ -43,7 +43,6 @@ export async function runStyleSample(app: App, styleId: string, ctx: JobCtx, opt
       description: meta.description,
       currentDesign,
       comments: opts.comments.map(({ text, atMs }) => ({ text, atMs })),
-      priorComments: opts.priorComments.map(({ text }) => ({ text })),
       previousScenes: previous?.scenes ?? [],
       voice: meta.voice,
     },

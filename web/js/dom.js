@@ -52,3 +52,11 @@ export function fmtMs(ms) {
   if (s < 60) return `${s.toFixed(1)}s`;
   return `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
 }
+
+/** Timestamp for comments and scenes: m:ss.d */
+export function fmtTs(ms) {
+  const t = Math.max(0, Math.round(ms / 100)) / 10;
+  const m = Math.floor(t / 60);
+  const sec = (t - m * 60).toFixed(1).padStart(4, '0');
+  return `${m}:${sec}`;
+}

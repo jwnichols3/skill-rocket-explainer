@@ -1,4 +1,5 @@
-import { h, toast, timeAgo, fmtMs } from '../dom.js';
+import { h, toast, timeAgo, fmtMs, fmtTs } from '../dom.js';
+import { dialog } from '../components/dialog.js';
 import { api } from '../api.js';
 import { navigate, registerRoute } from '../router.js';
 import { jobView } from '../components/job.js';
@@ -66,11 +67,13 @@ async function newStyleView(root) {
     form));
 }
 
-/** The style loop page. */
+/** The style loop page: watch, comment, re-render, browse rounds, save, clone. */
 async function styleView(root, { id }) {
   let stopJob = null;
+  let viewing = null; // round number shown in the player; null = current
   const page = h('section.page');
   root.append(page);
+  const { settings } = await api('/api/settings');
 
   async function load() {
     stopJob?.();
@@ -78,42 +81,146 @@ async function styleView(root, { id }) {
     const [style, active] = await Promise.all([api(`/api/styles/${id}`), api(`/api/jobs?target=style:${id}&active=1`)]);
     const last = active[0] ? null : (await api(`/api/jobs?target=style:${id}`))[0];
     const current = style.rounds.find((r) => r.n === style.currentRound);
+    const shown = style.rounds.find((r) => r.n === viewing) ?? current;
+    const isCurrent = shown && current && shown.n === current.n;
 
-    const playerBox = h('div.player');
-    if (current) {
-      playerBox.append(h('video.sample', { src: current.sampleUrl, controls: true, preload: 'auto', playsInline: true }));
-    } else {
-      playerBox.append(h('div.placeholder', active[0] ? 'Rendering the first sample…' : 'No sample yet.'));
-    }
-
+    // ---- Player + job ----
+    const video = shown ? h('video.sample', { src: shown.sampleUrl, controls: true, preload: 'auto', playsInline: true }) : null;
+    const playerBox = h('div.player', video ?? h('div.placeholder', active[0] ? 'Rendering the first sample…' : 'No sample yet.'));
     const jobBox = h('div');
     const job = active[0] ?? (last && last.status !== 'succeeded' && (!current || last.createdAt > current.createdAt) ? last : null);
     if (job) {
-      const v = jobView(job.id, {
-        onEnd: (j) => { if (j.status === 'succeeded') load(); },
-        onRetry: () => startSample(),
-      });
+      const v = jobView(job.id, { onEnd: (j) => { if (j.status === 'succeeded') { viewing = null; load(); } }, onRetry: () => rerender() });
       stopJob = v.stop;
       jobBox.append(v.el);
     }
+    const seek = (ms) => { if (video) { video.currentTime = ms / 1000; video.play().catch(() => {}); } };
+
+    // ---- Comments on the shown round ----
+    const comments = h('div', shown?.comments.length
+      ? shown.comments.map((c) => h('div.comment',
+          c.atMs != null ? h('button.ts', { onclick: () => seek(c.atMs), title: 'Jump to this moment' }, fmtTs(c.atMs)) : h('span.ts', { style: { visibility: 'hidden' } }, '0:00.0'),
+          h('span', { style: { flex: 1 } }, c.text),
+          isCurrent && !active[0] ? h('button.btn.ghost.small', { 'aria-label': 'Remove comment', onclick: async () => { await api(`/api/styles/${id}/rounds/${shown.n}/comments/${c.id}`, { method: 'DELETE' }); load(); } }, '✕') : null))
+      : h('p.muted.small', isCurrent ? 'No comments yet. What should change?' : 'No comments on this round.'));
+
+    let composer = null;
+    if (shown && isCurrent) {
+      const text = h('textarea', { id: 'comment-text', placeholder: '“Voice is wrong”, “contrast too low”, “slower camera on the diagram”…' });
+      const pin = h('input', { type: 'checkbox', id: 'comment-pin' });
+      const pinLabel = h('span', 'Pin to 0:00.0');
+      const updatePin = () => { pinLabel.textContent = `Pin to ${fmtTs((video?.currentTime ?? 0) * 1000)}`; };
+      video?.addEventListener('timeupdate', updatePin);
+      video?.addEventListener('seeked', updatePin);
+      video?.addEventListener('pause', () => { pin.checked = true; updatePin(); });
+      const add = h('button.btn', { type: 'submit' }, 'Add comment');
+      composer = h('form.composer', {
+        onsubmit: async (e) => {
+          e.preventDefault();
+          if (!text.value.trim()) return;
+          add.disabled = true;
+          try {
+            await api(`/api/styles/${id}/rounds/${shown.n}/comments`, { method: 'POST', body: { text: text.value, atMs: pin.checked && video ? Math.round(video.currentTime * 1000) : undefined } });
+            await load();
+            document.getElementById('comment-text')?.focus();
+          } catch (err) { toast(err.message, 'error'); add.disabled = false; }
+        },
+      },
+      h('label', { for: 'comment-text' }, 'Comment'), text,
+      h('div.row', h('label', { for: 'comment-pin' }, pin, pinLabel), h('span', { style: { flex: 1 } }), add));
+    }
+
+    // ---- Next round controls ----
+    let nextRound = null;
+    if (current) {
+      const modelSel = h('select', { id: 'next-model' }, settings.models.map((m) => h('option', { value: m.id, selected: m.id === style.model }, m.label)));
+      const effortSel = h('select', { id: 'next-effort' }, settings.efforts.map((e) => h('option', { value: e, selected: e === style.effort }, e)));
+      const voiceSel = h('select', { id: 'next-voice' }, h('option', { value: style.voice.voiceId }, style.voice.voiceId));
+      api(`/api/tts/${style.voice.provider}/voices`).then((voices) => {
+        voiceSel.replaceChildren(...voices.map((v) => h('option', { value: v.id, selected: v.id === style.voice.voiceId }, `${v.name} · ${v.language}`)));
+      }).catch(() => {});
+      const n = current.comments.length;
+      const go = h('button.btn.primary', { disabled: !!active[0], onclick: () => rerender({
+        model: modelSel.value, effort: effortSel.value,
+        voice: voiceSel.value === style.voice.voiceId ? undefined : { provider: style.voice.provider, voiceId: voiceSel.value, controls: style.voice.controls },
+      }) }, n ? `Re-render with ${n} comment${n === 1 ? '' : 's'}` : 'Re-render');
+      nextRound = h('div.panel',
+        h('div.panel-head', h('h3', `Next round`), h('span.muted.small', `builds on round ${current.n}`)),
+        h('div.next-round',
+          h('div.field', h('label', { for: 'next-voice' }, 'Next round voice'), voiceSel),
+          h('div.field', h('label', { for: 'next-model' }, 'Next round model'), modelSel),
+          h('div.field', h('label', { for: 'next-effort' }, 'Effort'), effortSel)),
+        h('div.row.end', { style: { marginTop: '14px' } }, go));
+    }
+
+    // ---- Save ----
+    let savePanel = null;
+    if (!style.savedAt) {
+      const nameInput = h('input', { id: 'save-name', value: style.name ?? '', placeholder: 'Name this style' });
+      const chips = h('div.name-chips');
+      const suggest = h('button.btn.small', { type: 'button', onclick: async () => {
+        suggest.disabled = true;
+        suggest.replaceChildren(h('span.spinner'), 'Thinking…');
+        try {
+          const { names } = await api(`/api/styles/${id}/name-suggestions`, { method: 'POST', body: {} });
+          chips.replaceChildren(...names.map((n) => h('button.name-chip', { type: 'button', onclick: () => { nameInput.value = n; nameInput.focus(); } }, n)));
+        } catch (err) { toast(err.message, 'error'); }
+        suggest.disabled = false;
+        suggest.replaceChildren('Suggest names');
+      } }, 'Suggest names');
+      savePanel = h('form.panel', {
+        onsubmit: async (e) => {
+          e.preventDefault();
+          try { await api(`/api/styles/${id}/save`, { method: 'POST', body: { name: nameInput.value } }); toast('Style saved'); load(); }
+          catch (err) { toast(err.message, 'error'); }
+        },
+      },
+      h('div.panel-head', h('h3', 'Save'), h('span.badge.warn', 'draft')),
+      h('div.field', h('label', { for: 'save-name' }, 'Style name'), nameInput, chips),
+      h('div.row', suggest, h('span', { style: { flex: 1 } }), h('button.btn.primary', { type: 'submit' }, 'Save style')));
+    }
+
+    // ---- Rounds ----
+    const rounds = h('div.rounds', [...style.rounds].reverse().map((r) => h('div.round', { class: r.n === style.currentRound ? 'current' : '' },
+      h('strong', `Round ${r.n}`),
+      h('span.grow.muted', r.summary || '—'),
+      r.comments.length ? h('span.badge', `${r.comments.length} 💬`) : null,
+      h('div.round-actions',
+        r.n === shown?.n ? h('span.badge.accent', 'viewing') : h('button.btn.ghost.small', { onclick: () => { viewing = r.n; load(); } }, 'View'),
+        r.n === style.currentRound ? null : h('button.btn.small', { disabled: !!active[0], onclick: async () => {
+          try { await api(`/api/styles/${id}/revert`, { method: 'POST', body: { round: r.n } }); viewing = null; toast(`Round ${r.n} is current`); load(); }
+          catch (err) { toast(err.message, 'error'); }
+        } }, 'Make current')))));
 
     page.replaceChildren(
       h('div.crumbs', h('a', { href: '/styles', 'data-link': true }, 'Styles'), ' / ', styleTitle(style)),
       h('header.page-head',
         h('div', h('h1', styleTitle(style)), h('div.row.muted.small', swatches(style.palette),
           current ? `Round ${current.n} of ${style.rounds.length}` : 'No rounds yet',
-          style.savedAt ? null : h('span.badge.warn', 'draft')))),
+          style.savedAt ? null : h('span.badge.warn', 'draft'),
+          style.clonedFrom ? h('span.badge', 'clone') : null)),
+        h('div.actions',
+          h('button.btn', { onclick: clone }, 'Clone'),
+          h('button.btn.danger', { onclick: () => remove(style) }, 'Delete'))),
       h('div.grid-2',
-        h('div.stack', playerBox, jobBox,
-          current ? h('div.panel',
-            h('div.panel-head', h('h3', `Round ${current.n}`), h('span.muted.small', `${fmtMs(current.durationMs)} · ${current.model} · ${current.effort} · ${timeAgo(current.createdAt)}`)),
-            current.summary ? h('p', current.summary) : null,
-            h('details', h('summary.small', 'Scenes'),
-              h('table.table', h('tbody', current.scenes.map((s) => h('tr',
-                h('td.mono', fmtMs(s.startMs)), h('td', h('strong', s.title), h('div.muted.small', s.narration)),
-                h('td', (s.elements ?? []).map((e) => h('span.badge', e)))))))))
-            : null),
         h('div.stack',
+          playerBox,
+          !isCurrent && shown ? h('div.viewing-note', `Viewing round ${shown.n}. Comments go on the current round (${current?.n}).`) : null,
+          jobBox,
+          shown ? h('div.panel',
+            h('div.panel-head', h('h3', `Round ${shown.n}`), h('span.muted.small.round-meta', `${fmtMs(shown.durationMs)} · ${shown.voice.voiceId} · ${shown.model} · ${shown.effort} · ${timeAgo(shown.createdAt)}`)),
+            shown.summary ? h('p', shown.summary) : null,
+            comments, composer,
+            h('details', { style: { marginTop: '12px' } }, h('summary.small', 'Scenes'),
+              h('table.table', h('tbody', shown.scenes.map((s) => h('tr',
+                h('td', h('button.ts', { onclick: () => seek(s.startMs ?? 0) }, fmtTs(s.startMs ?? 0))),
+                h('td', h('strong', s.title), h('div.muted.small', s.narration)),
+                h('td', (s.elements ?? []).map((e) => h('span.badge', e)))))))))
+            : null,
+          nextRound),
+        h('div.stack',
+          savePanel,
+          style.rounds.length ? h('div.panel', h('h3', 'Rounds'), rounds) : null,
           h('div.panel',
             h('h3', 'Description'), h('p.muted', style.description),
             h('dl.kv.small',
@@ -123,11 +230,35 @@ async function styleView(root, { id }) {
             h('details', h('summary', 'Style instructions (DESIGN.md)'), h('pre.doc', style.design))))));
   }
 
-  async function startSample() {
+  async function rerender(body = {}) {
     try {
-      await api(`/api/styles/${id}/sample`, { method: 'POST', body: {} });
+      await api(`/api/styles/${id}/rerender`, { method: 'POST', body });
+      viewing = null;
       await load();
     } catch (err) { toast(err.message, 'error'); }
+  }
+
+  async function clone() {
+    try {
+      const copy = await api(`/api/styles/${id}/clone`, { method: 'POST', body: {} });
+      toast('Cloned');
+      navigate(`/styles/${copy.id}`);
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
+  async function remove(style) {
+    const res = await fetch(`/api/styles/${id}`, { method: 'DELETE', headers: { 'x-explainer': '1' } });
+    if (res.ok) { toast('Style deleted'); navigate('/styles'); return; }
+    const body = await res.json().catch(() => ({}));
+    if (res.status !== 409 || !body.usedBy) { toast(body.error ?? 'Delete failed', 'error'); return; }
+    const ok = await dialog({
+      title: `Delete “${styleTitle(style)}”?`,
+      body: [h('p', `These explainers use this style. They keep their outputs, but can no longer re-render in it:`), h('ul', body.usedBy.map((e) => h('li', e.title)))],
+      actions: [{ label: 'Delete anyway', value: true, kind: 'danger' }],
+    });
+    if (!ok) return;
+    try { await api(`/api/styles/${id}?force=1`, { method: 'DELETE' }); toast('Style deleted'); navigate('/styles'); }
+    catch (err) { toast(err.message, 'error'); }
   }
 
   await load();

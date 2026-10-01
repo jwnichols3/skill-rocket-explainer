@@ -211,3 +211,22 @@ details[open] > summary { margin-bottom: 8px; }
 .step + .step::after { content: none; }
 .swatches { display: flex; gap: 6px; }
 .swatch { width: 18px; height: 18px; border-radius: 5px; border: 1px solid rgba(255,255,255,.15); }
+
+/* ---------- Dialog ---------- */
+.overlay { position: fixed; inset: 0; background: rgba(4, 6, 10, .7); backdrop-filter: blur(4px); display: grid; place-items: center; z-index: 50; padding: 24px; }
+.dialog { background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 22px; width: min(520px, 100%); box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+.dialog-body { color: var(--muted); margin-bottom: 18px; }
+.dialog-body ul { margin: 8px 0 0; padding-left: 18px; color: var(--text); }
+
+/* ---------- Style loop ---------- */
+.composer { display: flex; flex-direction: column; gap: 10px; }
+.composer textarea { min-height: 64px; }
+.composer .row label { margin: 0; display: flex; align-items: center; gap: 6px; font-weight: 400; color: var(--muted); }
+.next-round { display: grid; grid-template-columns: 1fr 1fr 110px; gap: 10px; align-items: end; }
+.next-round .field { margin: 0; }
+@media (max-width: 700px) { .next-round { grid-template-columns: 1fr; } }
+.name-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.name-chip { border: 1px solid var(--border-strong); background: var(--sunken); color: var(--text); border-radius: 999px; padding: 4px 12px; cursor: pointer; font: 500 13px var(--font); }
+.name-chip:hover { border-color: var(--accent); color: var(--accent); }
+.viewing-note { font-size: 13px; color: var(--warn); }
+.round-actions { display: flex; gap: 4px; }

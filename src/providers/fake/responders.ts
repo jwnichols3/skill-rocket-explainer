@@ -1,16 +1,16 @@
 import { designTemplate } from '../../style/design.ts';
 import { responders } from './agent.ts';
 
-/** Rewrites the Identity section to carry the description and every comment so tests can see them applied. */
+/** Appends each comment to the Identity section (and the description on round one) so tests can see them applied. */
 function reviseDesign(current: string, description: string, comments: { text: string }[]): string {
   const base = current && /^---\n/.test(current) ? current : designTemplate(description);
-  const notes = comments.map((c) => `- Applied: ${c.text}`).join('\n');
-  const identity = `${description}${notes ? `\n\nRevisions:\n${notes}` : ''}`;
-  return base.replace(/(^## Identity[^\n]*\n)[\s\S]*?(?=^## )/m, `$1\n${identity}\n\n`);
+  const additions = [base.includes(description) ? '' : description, ...comments.map((c) => `- Applied: ${c.text}`)].filter(Boolean).join('\n');
+  if (!additions) return base;
+  return base.replace(/(^## Identity[^\n]*\n[\s\S]*?)(?=^## )/m, `$1${additions}\n\n`);
 }
 
 responders['style-sample'] = (inputs) => ({
-  design: reviseDesign(inputs.currentDesign, inputs.description, [...(inputs.priorComments ?? []), ...(inputs.comments ?? [])]),
+  design: reviseDesign(inputs.currentDesign, inputs.description, inputs.comments ?? []),
   scenes: [
     { id: 's1', title: 'Opening', narration: 'Every message you send starts a journey.', visuals: 'Title card slams in', elements: ['opening', 'text-popups'] },
     { id: 's2', title: 'Packets', narration: 'It splits into packets, each in its own box.', visuals: 'Boxes split apart', elements: ['boxes', 'transition'] },

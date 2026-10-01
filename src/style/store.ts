@@ -163,6 +163,41 @@ export class StyleStore {
     });
   }
 
+  async addComment(id: string, n: number, text: string, atMs?: number): Promise<StyleComment> {
+    const comment: StyleComment = { id: newId('c_'), text, ...(atMs !== undefined ? { atMs } : {}), createdAt: new Date().toISOString() };
+    await this.updateRound(id, n, (r) => { r.comments.push(comment); });
+    await this.update(id, () => {});
+    return comment;
+  }
+
+  async removeComment(id: string, n: number, commentId: string): Promise<void> {
+    await this.updateRound(id, n, (r) => { r.comments = r.comments.filter((c) => c.id !== commentId); });
+  }
+
+  /** Makes an earlier round current (its instructions become the style's). Later rounds are kept. */
+  async revert(id: string, n: number): Promise<StyleMeta> {
+    const design = await readFile(join(this.roundDir(id, n), 'DESIGN.md'), 'utf8').catch(() => null);
+    if (design === null) throw Object.assign(new Error(`no round ${n}`), { status: 404 });
+    return this.update(id, async (m) => {
+      await writeFileAtomic(join(this.dir(id), 'DESIGN.md'), design);
+      m.currentRound = n;
+    });
+  }
+
+  /** An independent copy: instructions, settings and round history. */
+  async clone(id: string, name?: string | null): Promise<StyleMeta> {
+    const src = await this.meta(id);
+    const copyId = newId('st_');
+    await cp(this.dir(id), this.dir(copyId), { recursive: true });
+    const now = new Date().toISOString();
+    const meta: StyleMeta = {
+      ...src, id: copyId, name: name?.trim() || (src.name ? `${src.name} copy` : null),
+      createdAt: now, updatedAt: now, savedAt: null, clonedFrom: id,
+    };
+    await writeJson(join(this.dir(copyId), 'style.json'), meta);
+    return meta;
+  }
+
   async delete(id: string): Promise<void> {
     await this.meta(id);
     await rm(this.dir(id), { recursive: true, force: true });

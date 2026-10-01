@@ -95,7 +95,7 @@ export async function startServer(opts: StartOptions): Promise<RunningServer> {
     } catch (err: any) {
       const status = err instanceof HttpError ? err.status : typeof err?.status === "number" ? err.status : 500;
       if (status === 500) app.log('error', `${req.method} ${url.pathname}: ${err?.stack ?? err}`);
-      if (!res.headersSent) sendJson(res, status, { error: err?.message ?? String(err) });
+      if (!res.headersSent) sendJson(res, status, { error: err?.message ?? String(err), ...(err instanceof HttpError ? err.data : {}) });
       else res.end();
     }
   });
