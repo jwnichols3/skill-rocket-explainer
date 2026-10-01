@@ -1,6 +1,6 @@
 # Intent: Rocket Explainer (`/explainer`)
 
-Status: draft intent 2026-10-01, open questions below, not yet a spec
+Status: decisions recorded 2026-10-01, ready for to-spec
 Source: walk and talk `2026-10-01-explainer-skill` in `~/code/rocket-walk-talk` (local only).
 Work-specific details from the walk (the meeting that prompted it, who was on it, internal systems)
 are deliberately left out. This repo is the generic version.
@@ -104,11 +104,70 @@ pluggable and avoid organization-specific language.
 - Video-specific skills and models
 - The specialized version
 
-## Before the spec
+## Prior art
 
-Research whether something like this already exists to leverage: explainer skills, "show me"-style
-visual skills (which skew to technical diagrams), and agentic video tools.
+`docs/research/prior-art.md` (2026-10-01).
+- HeyGen's HyperFrames (Apache-2.0) already does much of the explainer-video pipeline.
+- `remotion-dev/skills` covers Remotion guidance, so don't write our own.
+- Nobody ships the style loop: describe, sample, comment, re-render, save. **That loop is the
+  product.**
 
-## Open questions
+## Decisions (2026-10-01, Rocket)
 
-See the Q&A section, filled in as we cycle.
+- **v1 delivers all four output types end to end:** video, deck, one-pager visual, briefing doc.
+  - **Video:** narrated animation, MP4.
+  - **Deck:** HTML slides for style fidelity, plus a `.pptx` export.
+  - **Briefing doc:** Markdown rendered to a styled PDF.
+  - **Visual:** styled HTML page, exported to PNG.
+- **One style, per-type rules:**
+  - A style holds a shared identity (palette, type, tone, humor, voice) plus a section per output
+    type.
+  - The ~10 s video is the main sample.
+  - A deck, visual or doc sample renders on demand the first time a style is used for that type.
+- **Style file format:** extend Google's DESIGN.md (YAML tokens + prose). Add sections for motion,
+  camera, voice and per-type rules.
+- **Seed style:** Hitchhiker's Guide, built from the description above only. No reference
+  material from work repos enters this repo.
+- **Entry flow is a bakeoff:** "chat gathers, web iterates" vs "web does everything". Rocket leans
+  toward a single web interface. Build both as thin prototypes, judge the tradeoffs, Rocket picks.
+  Known tradeoff:
+  - Chat gets `@` file completion and the session's connectors for free.
+  - Web-everything needs its own source picker, but it's one interface, and it works through the
+    proxy.
+- **Animation stack is a bakeoff:** Remotion vs HyperFrames, both behind the stack interface, which
+  also proves pluggability.
+  - Render the seed style's sample in each, judge, pick the default.
+  - Licensing: Remotion is free for Rocket personally, but orgs of 4+ need a paid license, including
+    per-render automation fees. HyperFrames is Apache-2.0. This matters for the later specialized
+    version.
+- **Host:** 127.0.0.1 by default. Setup also accepts a reverse-proxy hostname for a dev box.
+  Loopback only, no auth, like Review Desk.
+- **Agent surfaces v1:** Claude Code via `claude -p`, on the Claude subscription or on Bedrock with
+  a chosen AWS profile (with inference-profile discovery). Codex goes to the backlog behind a
+  pluggable surface interface.
+- **Model:** Opus 5.5 at high effort by default. Fable 5.1 in the dropdown.
+- **TTS v1:**
+  - Amazon Polly is the default: voices, plus rate/pitch/volume where the engine supports it.
+    Generative has no speech marks, so plan a forced-alignment fallback.
+  - Kokoro for local/offline use.
+  - ElevenLabs as the API-key provider, built as the template for adding API-based TTS engines.
+- **Storage:** styles, settings and explainer projects in a user-level data dir (e.g.
+  `~/.rocket-explainer/`). Finished outputs can also be exported to a path you name.
+- **App stack:** Node/TypeScript, since both animation stacks are Node. Playwright tests.
+- **Install/update:** `install.sh` + GitHub releases, as in Preso Control. The settings "check for
+  update" button compares against the latest release.
+- **Rocket Studios:** clean slate, borrowing ideas only (one audio clip and component per scene, a
+  scene time map). No code copied.
+- **Repo:** private now, written as if public: no personal paths, profiles or secrets in code, plus
+  a license file.
+- **Music:** backlog.
+- **Review Desk hand-off:** backlog. It must never block.
+- **Acceptance:** dogfood. Explain this repo's own intent and research in the Hitchhiker's style, in
+  all four output types.
+- **Delivery:** Rocket runs to-spec, then to-tickets, then the agentic dev loop, in a new session.
+
+## Backlog
+
+Codex surface, background music, Review Desk hand-off, style export, more animation stacks (adding
+one is probably a skill), video-specific models, and the
+specialized version.
