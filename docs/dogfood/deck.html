@@ -1,0 +1,1167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rocket Explainer: The Style Loop Is the Product</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #05080D; }
+  .slide { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; display: none; cursor: pointer; }
+  .slide.active { display: block; }
+  .slide iframe { display: block; width: 1920px; height: 1080px; border: 0; pointer-events: none; }
+  @media print {
+    @page { size: 1920px 1080px; margin: 0; }
+    html, body { height: auto; overflow: visible; }
+    .slide { display: block; position: relative; transform: none !important; break-after: page; }
+  }
+</style>
+</head>
+<body>
+<section class="slide" id="s1" data-scene="s1" aria-label="Slide 1: ROCKET EXPLAINER">
+<iframe title="ROCKET EXPLAINER" tabindex="-1" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;title&gt;Rocket Explainer&lt;/title&gt;
+&lt;style&gt;
+  html, body {
+    margin: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    background: #05080d;
+  }
+  .slide {
+    position: relative;
+    width: 1920px;
+    height: 1080px;
+    background-color: #05080d;
+    background-image:
+      linear-gradient(to right, rgba(18, 58, 77, 0.12) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(18, 58, 77, 0.12) 1px, transparent 1px);
+    background-size: 48px 48px;
+    color: #eafff5;
+  }
+  .title {
+    position: absolute;
+    left: 96px;
+    top: 96px;
+    width: 1200px;
+    margin: 0;
+    font-family: &quot;Inter&quot;, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
+    font-weight: 900;
+    font-size: 76px;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    color: #eafff5;
+  }
+  .sub {
+    position: absolute;
+    left: 96px;
+    top: 204px;
+    width: 1000px;
+    margin: 0;
+    font-family: &quot;Inter&quot;, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
+    font-weight: 500;
+    font-size: 34px;
+    line-height: 44px;
+    color: #eafff5;
+  }
+  .mark {
+    text-decoration-line: underline;
+    text-decoration-color: #e8ff3a;
+    text-decoration-thickness: 6px;
+    text-underline-offset: 8px;
+    text-decoration-skip-ink: none;
+  }
+  .rocket {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1920px;
+    height: 1080px;
+  }
+  .foot, .page {
+    position: absolute;
+    top: 956px;
+    height: 28px;
+    margin: 0;
+    font-family: &quot;JetBrains Mono&quot;, ui-monospace, &quot;SF Mono&quot;, Menlo, Consolas, monospace;
+    font-weight: 600;
+    font-size: 20px;
+    line-height: 28px;
+    letter-spacing: 0.04em;
+    color: #7f9bb0;
+  }
+  .foot { left: 96px; width: 1000px; }
+  .page { left: 1624px; width: 200px; text-align: right; }
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;slide&quot;&gt;
+  &lt;svg class=&quot;rocket&quot; viewBox=&quot;0 0 1920 1080&quot; width=&quot;1920&quot; height=&quot;1080&quot; aria-hidden=&quot;true&quot;&gt;
+    &lt;defs&gt;
+      &lt;filter id=&quot;glow&quot; x=&quot;-60%&quot; y=&quot;-40%&quot; width=&quot;220%&quot; height=&quot;180%&quot;&gt;
+        &lt;feGaussianBlur in=&quot;SourceAlpha&quot; stdDeviation=&quot;11&quot; result=&quot;blur&quot;/&gt;
+        &lt;feFlood flood-color=&quot;#39ff9c&quot; flood-opacity=&quot;0.55&quot;/&gt;
+        &lt;feComposite in2=&quot;blur&quot; operator=&quot;in&quot; result=&quot;halo&quot;/&gt;
+        &lt;feMerge&gt;
+          &lt;feMergeNode in=&quot;halo&quot;/&gt;
+          &lt;feMergeNode in=&quot;SourceGraphic&quot;/&gt;
+        &lt;/feMerge&gt;
+      &lt;/filter&gt;
+    &lt;/defs&gt;
+    &lt;g filter=&quot;url(#glow)&quot;&gt;
+      &lt;rect x=&quot;1338&quot; y=&quot;556&quot; width=&quot;34&quot; height=&quot;94&quot; rx=&quot;10&quot; fill=&quot;#39ff9c&quot;/&gt;
+      &lt;rect x=&quot;1468&quot; y=&quot;556&quot; width=&quot;34&quot; height=&quot;94&quot; rx=&quot;10&quot; fill=&quot;#39ff9c&quot;/&gt;
+      &lt;rect x=&quot;1372&quot; y=&quot;390&quot; width=&quot;96&quot; height=&quot;250&quot; rx=&quot;18&quot; fill=&quot;#39ff9c&quot;/&gt;
+      &lt;circle cx=&quot;1420&quot; cy=&quot;466&quot; r=&quot;24&quot; fill=&quot;#05080d&quot; stroke=&quot;#39ff9c&quot; stroke-width=&quot;3&quot;/&gt;
+    &lt;/g&gt;
+    &lt;g stroke=&quot;#2ec8ff&quot; stroke-width=&quot;3&quot; stroke-linecap=&quot;round&quot;&gt;
+      &lt;line x1=&quot;1396&quot; y1=&quot;668&quot; x2=&quot;1396&quot; y2=&quot;712&quot;/&gt;
+      &lt;line x1=&quot;1420&quot; y1=&quot;668&quot; x2=&quot;1420&quot; y2=&quot;736&quot;/&gt;
+      &lt;line x1=&quot;1444&quot; y1=&quot;668&quot; x2=&quot;1444&quot; y2=&quot;712&quot;/&gt;
+    &lt;/g&gt;
+  &lt;/svg&gt;
+
+  &lt;h1 class=&quot;title&quot;&gt;Rocket Explainer&lt;/h1&gt;
+  &lt;p class=&quot;sub&quot;&gt;The &lt;span class=&quot;mark&quot;&gt;style loop&lt;/span&gt; is the product.&lt;/p&gt;
+
+  &lt;p class=&quot;foot&quot;&gt;*Planned, not shipped. Decisions recorded 2026-10-01.&lt;/p&gt;
+  &lt;p class=&quot;page&quot;&gt;01 / 06&lt;/p&gt;
+&lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+</section>
+<section class="slide" id="s2" data-scene="s2" aria-label="Slide 2: ONE COMMAND, FOUR OUTPUTS">
+<iframe title="ONE COMMAND, FOUR OUTPUTS" tabindex="-1" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;title&gt;One command, four outputs&lt;/title&gt;
+&lt;style&gt;
+  html, body {
+    margin: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    background: #05080d;
+  }
+  .slide {
+    position: relative;
+    width: 1920px;
+    height: 1080px;
+    background-color: #05080d;
+    background-image:
+      linear-gradient(to right, rgba(18, 58, 77, 0.12) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(18, 58, 77, 0.12) 1px, transparent 1px);
+    background-size: 48px 48px;
+    color: #eafff5;
+  }
+  .title {
+    position: absolute;
+    left: 96px;
+    top: 96px;
+    width: 1400px;
+    margin: 0;
+    font-family: &quot;Inter&quot;, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
+    font-weight: 900;
+    font-size: 76px;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    color: #eafff5;
+  }
+  .sub {
+    position: absolute;
+    left: 96px;
+    top: 204px;
+    width: 1200px;
+    margin: 0;
+    font-family: &quot;Inter&quot;, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
+    font-weight: 500;
+    font-size: 34px;
+    line-height: 44px;
+    color: #eafff5;
+  }
+  .mono {
+    font-family: &quot;JetBrains Mono&quot;, ui-monospace, &quot;SF Mono&quot;, Menlo, Consolas, monospace;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .frame {
+    position: absolute;
+    left: 96px;
+    top: 300px;
+    width: 1728px;
+    height: 620px;
+    box-sizing: border-box;
+    border: 1px solid #2ec8ff;
+    border-radius: 32px;
+  }
+  .frame-label {
+    position: absolute;
+    left: 128px;
+    top: 286px;
+    width: 384px;
+    height: 28px;
+    line-height: 28px;
+    font-size: 22px;
+    text-align: center;
+    color: #2ec8ff;
+    background: #05080d;
+    white-space: nowrap;
+  }
+  .wires {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1920px;
+    height: 1080px;
+  }
+  .src, .out, .ring, .pill, .key {
+    position: absolute;
+    box-sizing: border-box;
+  }
+  .src {
+    left: 136px;
+    width: 220px;
+    height: 80px;
+    border: 3px solid #2ec8ff;
+    border-radius: 18px;
+    background: #0b1622;
+    font-size: 22px;
+    line-height: 74px;
+    text-align: center;
+    color: #eafff5;
+  }
+  .pill {
+    left: 480px;
+    top: 562px;
+    width: 700px;
+    height: 96px;
+    border-radius: 999px;
+    background: #39ff9c;
+    box-shadow: 0 0 22px rgba(57, 255, 156, 0.55);
+    font-size: 30px;
+    line-height: 96px;
+    text-align: center;
+    color: #05080d;
+    white-space: nowrap;
+  }
+  .out {
+    left: 1360px;
+    width: 360px;
+    height: 88px;
+    border: 3px solid #2ec8ff;
+    border-radius: 18px;
+    background: #0f2233;
+    font-size: 22px;
+    line-height: 82px;
+    padding-left: 25px;
+    color: #eafff5;
+    white-space: nowrap;
+  }
+  /* The takeaway: ~20% larger than its siblings, primary at 15% */
+  .key {
+    left: 1324px;
+    top: 501px;
+    width: 432px;
+    height: 106px;
+    border: 3px solid #39ff9c;
+    border-radius: 18px;
+    background: #0d2d22;
+    font-size: 30px;
+    line-height: 100px;
+    padding-left: 31px;
+    color: #eafff5;
+    white-space: nowrap;
+  }
+  /* Highlight ring, 16 px clear of the box edge */
+  .ring {
+    left: 1302px;
+    top: 479px;
+    width: 476px;
+    height: 150px;
+    border: 6px solid #e8ff3a;
+    border-radius: 26px;
+    box-shadow: 0 0 22px rgba(232, 255, 58, 0.55), inset 0 0 22px rgba(232, 255, 58, 0.25);
+  }
+  .fmt { color: #7f9bb0; }
+  .page {
+    position: absolute;
+    top: 956px;
+    left: 1624px;
+    width: 200px;
+    height: 28px;
+    margin: 0;
+    font-size: 20px;
+    line-height: 28px;
+    text-align: right;
+    color: #7f9bb0;
+  }
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;slide&quot;&gt;
+  &lt;h1 class=&quot;title&quot;&gt;One command, four outputs&lt;/h1&gt;
+  &lt;p class=&quot;sub&quot;&gt;Anything the agent can reach, made into an explainer.&lt;/p&gt;
+
+  &lt;div class=&quot;frame&quot;&gt;&lt;/div&gt;
+  &lt;div class=&quot;frame-label mono&quot;&gt;local web app · 127.0.0.1&lt;/div&gt;
+
+  &lt;svg class=&quot;wires&quot; viewBox=&quot;0 0 1920 1080&quot; width=&quot;1920&quot; height=&quot;1080&quot; aria-hidden=&quot;true&quot;&gt;
+    &lt;defs&gt;
+      &lt;marker id=&quot;head&quot; viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;5&quot; markerHeight=&quot;5&quot; orient=&quot;auto-start-reverse&quot; markerUnits=&quot;strokeWidth&quot;&gt;
+        &lt;path d=&quot;M0,0 L10,5 L0,10 z&quot; fill=&quot;#2ec8ff&quot;/&gt;
+      &lt;/marker&gt;
+    &lt;/defs&gt;
+    &lt;g stroke=&quot;#2ec8ff&quot; stroke-width=&quot;3&quot; stroke-linecap=&quot;round&quot; fill=&quot;none&quot; marker-end=&quot;url(#head)&quot;&gt;
+      &lt;line x1=&quot;362&quot; y1=&quot;470&quot; x2=&quot;472&quot; y2=&quot;594&quot;/&gt;
+      &lt;line x1=&quot;362&quot; y1=&quot;610&quot; x2=&quot;470&quot; y2=&quot;610&quot;/&gt;
+      &lt;line x1=&quot;362&quot; y1=&quot;750&quot; x2=&quot;472&quot; y2=&quot;626&quot;/&gt;
+      &lt;line x1=&quot;1192&quot; y1=&quot;610&quot; x2=&quot;1348&quot; y2=&quot;413&quot;/&gt;
+      &lt;line x1=&quot;1192&quot; y1=&quot;610&quot; x2=&quot;1290&quot; y2=&quot;556&quot;/&gt;
+      &lt;line x1=&quot;1192&quot; y1=&quot;610&quot; x2=&quot;1348&quot; y2=&quot;696&quot;/&gt;
+      &lt;line x1=&quot;1192&quot; y1=&quot;610&quot; x2=&quot;1348&quot; y2=&quot;807&quot;/&gt;
+    &lt;/g&gt;
+  &lt;/svg&gt;
+
+  &lt;div class=&quot;src mono&quot; style=&quot;top: 430px;&quot;&gt;meeting&lt;/div&gt;
+  &lt;div class=&quot;src mono&quot; style=&quot;top: 570px;&quot;&gt;paper&lt;/div&gt;
+  &lt;div class=&quot;src mono&quot; style=&quot;top: 710px;&quot;&gt;folder&lt;/div&gt;
+
+  &lt;div class=&quot;pill mono&quot;&gt;/explainer &amp;lt;topic&amp;gt; &amp;lt;style&amp;gt; &amp;lt;type&amp;gt;&lt;/div&gt;
+
+  &lt;div class=&quot;out mono&quot; style=&quot;top: 367px;&quot;&gt;VIDEO &lt;span class=&quot;fmt&quot;&gt;· MP4&lt;/span&gt;&lt;/div&gt;
+  &lt;div class=&quot;ring&quot;&gt;&lt;/div&gt;
+  &lt;div class=&quot;key mono&quot;&gt;DECK &lt;span class=&quot;fmt&quot;&gt;· HTML + PPTX&lt;/span&gt;&lt;/div&gt;
+  &lt;div class=&quot;out mono&quot; style=&quot;top: 653px;&quot;&gt;ONE-PAGER &lt;span class=&quot;fmt&quot;&gt;· PNG&lt;/span&gt;&lt;/div&gt;
+  &lt;div class=&quot;out mono&quot; style=&quot;top: 765px;&quot;&gt;BRIEFING DOC &lt;span class=&quot;fmt&quot;&gt;· PDF&lt;/span&gt;&lt;/div&gt;
+
+  &lt;p class=&quot;page mono&quot;&gt;02 / 06&lt;/p&gt;
+&lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+</section>
+<section class="slide" id="s3" data-scene="s3" aria-label="Slide 3: WHY STYLES ARE THE PRODUCT">
+<iframe title="WHY STYLES ARE THE PRODUCT" tabindex="-1" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;title&gt;Why styles are the product&lt;/title&gt;
+&lt;style&gt;
+  html, body {
+    margin: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    background: #05080d;
+  }
+  .slide {
+    position: relative;
+    width: 1920px;
+    height: 1080px;
+    background-color: #05080d;
+    background-image:
+      linear-gradient(to right, rgba(18, 58, 77, 0.12) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(18, 58, 77, 0.12) 1px, transparent 1px);
+    background-size: 48px 48px;
+    color: #eafff5;
+  }
+  .title {
+    position: absolute;
+    left: 96px;
+    top: 96px;
+    width: 1400px;
+    margin: 0;
+    font-family: &quot;Inter&quot;, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
+    font-weight: 900;
+    font-size: 76px;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    color: #eafff5;
+  }
+  .sub {
+    position: absolute;
+    left: 96px;
+    top: 204px;
+    width: 1200px;
+    margin: 0;
+    font-family: &quot;Inter&quot;, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
+    font-weight: 500;
+    font-size: 34px;
+    line-height: 44px;
+    color: #eafff5;
+  }
+  .mono {
+    font-family: &quot;JetBrains Mono&quot;, ui-monospace, &quot;SF Mono&quot;, Menlo, Consolas, monospace;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .wires {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1920px;
+    height: 1080px;
+  }
+  .card, .label, .panel, .ring {
+    position: absolute;
+    box-sizing: border-box;
+  }
+  .card {
+    width: 340px;
+    height: 140px;
+    border-radius: 18px;
+    font-family: &quot;Inter&quot;, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
+    font-weight: 900;
+    font-size: 46px;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    line-height: 134px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .opus5 {
+    left: 220px;
+    top: 666px;
+    border: 3px solid #7f9bb0;
+    background: #05080d;
+    color: #7f9bb0;
+  }
+  .fable {
+    left: 760px;
+    top: 366px;
+    border: 3px solid #39ff9c;
+    background: rgba(57, 255, 156, 0.15);
+    box-shadow: 0 0 22px rgba(57, 255, 156, 0.55);
+    color: #eafff5;
+  }
+  .opus55 {
+    left: 1330px;
+    top: 666px;
+    border: 3px solid #2ec8ff;
+    background: #0b1622;
+    color: #eafff5;
+  }
+  .label {
+    width: 340px;
+    height: 30px;
+    font-size: 22px;
+    line-height: 30px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .ring {
+    left: 1280px;
+    top: 356px;
+    width: 440px;
+    height: 160px;
+    border: 6px solid #e8ff3a;
+    border-radius: 26px;
+  }
+  .panel {
+    left: 1290px;
+    top: 366px;
+    width: 420px;
+    height: 140px;
+    border: 1px solid #2ec8ff;
+    border-radius: 18px;
+    background: #0f2233;
+    color: #eafff5;
+    font-size: 22px;
+    line-height: 32px;
+    padding-top: 38px;
+    text-align: center;
+  }
+  .foot, .page {
+    position: absolute;
+    top: 956px;
+    height: 28px;
+    margin: 0;
+    font-size: 20px;
+    line-height: 28px;
+    color: #7f9bb0;
+    white-space: nowrap;
+  }
+  .foot { left: 96px; width: 1200px; }
+  .page { left: 1624px; width: 200px; text-align: right; }
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;slide&quot;&gt;
+  &lt;h1 class=&quot;title&quot;&gt;Why styles are the product&lt;/h1&gt;
+  &lt;p class=&quot;sub&quot;&gt;A style is a named, versioned asset, not a prompt line.&lt;/p&gt;
+
+  &lt;svg class=&quot;wires&quot; viewBox=&quot;0 0 1920 1080&quot; width=&quot;1920&quot; height=&quot;1080&quot; aria-hidden=&quot;true&quot;&gt;
+    &lt;defs&gt;
+      &lt;marker id=&quot;head&quot; viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;5&quot; markerHeight=&quot;5&quot; orient=&quot;auto-start-reverse&quot; markerUnits=&quot;strokeWidth&quot;&gt;
+        &lt;path d=&quot;M0,0 L10,5 L0,10 z&quot; fill=&quot;#2ec8ff&quot;/&gt;
+      &lt;/marker&gt;
+    &lt;/defs&gt;
+    &lt;g stroke=&quot;#2ec8ff&quot; stroke-width=&quot;3&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; fill=&quot;none&quot;&gt;
+      &lt;line x1=&quot;96&quot; y1=&quot;904&quot; x2=&quot;1824&quot; y2=&quot;904&quot;/&gt;
+      &lt;path d=&quot;M120 904 V864 H660 V564 H1200 V864 H1800 V904&quot;/&gt;
+      &lt;line x1=&quot;1500&quot; y1=&quot;664&quot; x2=&quot;1500&quot; y2=&quot;528&quot; stroke-dasharray=&quot;12 10&quot; marker-end=&quot;url(#head)&quot;/&gt;
+    &lt;/g&gt;
+  &lt;/svg&gt;
+
+  &lt;div class=&quot;card opus5&quot;&gt;Opus 5&lt;/div&gt;
+  &lt;div class=&quot;label mono&quot; style=&quot;left: 220px; top: 818px; color: #7f9bb0;&quot;&gt;meh&lt;/div&gt;
+
+  &lt;div class=&quot;card fable&quot;&gt;Fable 5.1&lt;/div&gt;
+  &lt;div class=&quot;label mono&quot; style=&quot;left: 760px; top: 518px; color: #39ff9c;&quot;&gt;dramatic step up&lt;/div&gt;
+
+  &lt;div class=&quot;card opus55&quot;&gt;Opus 5.5&lt;/div&gt;
+  &lt;div class=&quot;label mono&quot; style=&quot;left: 1330px; top: 818px; color: #2ec8ff;&quot;&gt;probably matches...&lt;/div&gt;
+
+  &lt;div class=&quot;ring&quot;&gt;&lt;/div&gt;
+  &lt;div class=&quot;panel mono&quot;&gt;...if style instructions&lt;br&gt;are refined&lt;/div&gt;
+
+  &lt;p class=&quot;foot mono&quot;&gt;*&quot;Probably&quot; is doing some work here. Untested.&lt;/p&gt;
+  &lt;p class=&quot;page mono&quot;&gt;03 / 06&lt;/p&gt;
+&lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+</section>
+<section class="slide" id="s4" data-scene="s4" aria-label="Slide 4: THE PIPELINE ALREADY EXISTS">
+<iframe title="THE PIPELINE ALREADY EXISTS" tabindex="-1" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;title&gt;The pipeline already exists&lt;/title&gt;
+&lt;style&gt;
+  html, body {
+    margin: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    background: #05080d;
+  }
+  .slide {
+    position: relative;
+    width: 1920px;
+    height: 1080px;
+    background-color: #05080d;
+    background-image:
+      linear-gradient(to right, rgba(18, 58, 77, 0.12) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(18, 58, 77, 0.12) 1px, transparent 1px);
+    background-size: 48px 48px;
+    color: #eafff5;
+  }
+  .title {
+    position: absolute;
+    left: 96px;
+    top: 96px;
+    width: 1400px;
+    margin: 0;
+    font-family: &quot;Inter&quot;, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
+    font-weight: 900;
+    font-size: 76px;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    color: #eafff5;
+  }
+  .sub {
+    position: absolute;
+    left: 96px;
+    top: 204px;
+    width: 1400px;
+    margin: 0;
+    font-family: &quot;Inter&quot;, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
+    font-weight: 500;
+    font-size: 34px;
+    line-height: 44px;
+    color: #eafff5;
+    white-space: nowrap;
+  }
+  .sub .hl {
+    text-decoration: underline;
+    text-decoration-color: #e8ff3a;
+    text-decoration-thickness: 6px;
+    text-underline-offset: 8px;
+  }
+  .mono {
+    font-family: &quot;JetBrains Mono&quot;, ui-monospace, &quot;SF Mono&quot;, Menlo, Consolas, monospace;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .head {
+    position: absolute;
+    top: 300px;
+    width: 848px;
+    height: 56px;
+    margin: 0;
+    font-family: &quot;Inter&quot;, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
+    font-weight: 900;
+    font-size: 46px;
+    line-height: 56px;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+  }
+  .wires {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1920px;
+    height: 1080px;
+  }
+  .box, .ring, .void, .note, .label {
+    position: absolute;
+    box-sizing: border-box;
+  }
+  .box {
+    border: 3px solid #2ec8ff;
+    border-radius: 18px;
+    background: #0b1622;
+    color: #eafff5;
+    font-size: 34px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .note {
+    left: 96px;
+    width: 848px;
+    height: 32px;
+    font-size: 22px;
+    line-height: 32px;
+    color: #7f9bb0;
+    white-space: nowrap;
+  }
+  .ring {
+    left: 976px;
+    top: 388px;
+    width: 848px;
+    height: 448px;
+    border: 6px solid #e8ff3a;
+    border-radius: 30px;
+    background: #05080d;
+  }
+  .void {
+    left: 992px;
+    top: 404px;
+    width: 816px;
+    height: 416px;
+    border: 3px dashed #ff5c8a;
+    border-radius: 18px;
+  }
+  .label {
+    left: 992px;
+    width: 816px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .page {
+    position: absolute;
+    left: 1624px;
+    top: 956px;
+    width: 200px;
+    height: 28px;
+    margin: 0;
+    font-size: 20px;
+    line-height: 28px;
+    color: #7f9bb0;
+    text-align: right;
+    white-space: nowrap;
+  }
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;slide&quot;&gt;
+  &lt;h1 class=&quot;title&quot;&gt;The pipeline already exists&lt;/h1&gt;
+  &lt;p class=&quot;sub&quot;&gt;Survey verdict: “Build this. &lt;span class=&quot;hl&quot;&gt;It is the product.&lt;/span&gt;”&lt;/p&gt;
+
+  &lt;!-- LEFT: exists --&gt;
+  &lt;p class=&quot;head&quot; style=&quot;left: 96px; color: #2ec8ff;&quot;&gt;Exists&lt;/p&gt;
+
+  &lt;svg class=&quot;wires&quot; viewBox=&quot;0 0 1920 1080&quot; width=&quot;1920&quot; height=&quot;1080&quot; aria-hidden=&quot;true&quot;&gt;
+    &lt;defs&gt;
+      &lt;marker id=&quot;head&quot; viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;5&quot; markerHeight=&quot;5&quot; orient=&quot;auto-start-reverse&quot; markerUnits=&quot;strokeWidth&quot;&gt;
+        &lt;path d=&quot;M0,0 L10,5 L0,10 z&quot; fill=&quot;#2ec8ff&quot;/&gt;
+      &lt;/marker&gt;
+    &lt;/defs&gt;
+    &lt;g stroke=&quot;#2ec8ff&quot; stroke-width=&quot;3&quot; stroke-linecap=&quot;round&quot; fill=&quot;none&quot;&gt;
+      &lt;line x1=&quot;476&quot; y1=&quot;462&quot; x2=&quot;700&quot; y2=&quot;540&quot; marker-end=&quot;url(#head)&quot;/&gt;
+      &lt;line x1=&quot;476&quot; y1=&quot;662&quot; x2=&quot;700&quot; y2=&quot;584&quot; marker-end=&quot;url(#head)&quot;/&gt;
+    &lt;/g&gt;
+  &lt;/svg&gt;
+
+  &lt;div class=&quot;box mono&quot; style=&quot;left: 96px; top: 402px; width: 380px; height: 120px; line-height: 114px;&quot;&gt;HyperFrames&lt;/div&gt;
+  &lt;div class=&quot;box mono&quot; style=&quot;left: 96px; top: 602px; width: 380px; height: 120px; line-height: 114px;&quot;&gt;Remotion&lt;/div&gt;
+  &lt;div class=&quot;box mono&quot; style=&quot;left: 704px; top: 492px; width: 240px; height: 140px; line-height: 134px;&quot;&gt;MP4&lt;/div&gt;
+
+  &lt;div class=&quot;note mono&quot; style=&quot;top: 764px;&quot;&gt;HyperFrames: 13 fixed presets&lt;/div&gt;
+  &lt;div class=&quot;note mono&quot; style=&quot;top: 804px;&quot;&gt;theme-factory: 10 static themes&lt;/div&gt;
+
+  &lt;!-- RIGHT: missing --&gt;
+  &lt;p class=&quot;head&quot; style=&quot;left: 976px; color: #ff5c8a;&quot;&gt;Missing&lt;/p&gt;
+
+  &lt;div class=&quot;ring&quot;&gt;&lt;/div&gt;
+  &lt;div class=&quot;void&quot;&gt;&lt;/div&gt;
+  &lt;div class=&quot;label mono&quot; style=&quot;top: 560px; height: 44px; font-size: 30px; line-height: 44px; color: #eafff5;&quot;&gt;style loop&lt;/div&gt;
+  &lt;div class=&quot;label mono&quot; style=&quot;top: 620px; height: 32px; font-size: 22px; line-height: 32px; color: #7f9bb0;&quot;&gt;describe · sample · comment · re-render · save&lt;/div&gt;
+
+  &lt;p class=&quot;page mono&quot;&gt;04 / 06&lt;/p&gt;
+&lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+</section>
+<section class="slide" id="s5" data-scene="s5" aria-label="Slide 5: THE STYLE LOOP">
+<iframe title="THE STYLE LOOP" tabindex="-1" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;title&gt;The style loop&lt;/title&gt;
+&lt;style&gt;
+  html, body {
+    margin: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    background: #05080d;
+  }
+  .slide {
+    position: relative;
+    width: 1920px;
+    height: 1080px;
+    background-color: #05080d;
+    background-image:
+      linear-gradient(to right, rgba(18, 58, 77, 0.12) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(18, 58, 77, 0.12) 1px, transparent 1px);
+    background-size: 48px 48px;
+    color: #eafff5;
+  }
+  .title {
+    position: absolute;
+    left: 96px;
+    top: 96px;
+    width: 1400px;
+    margin: 0;
+    font-family: &quot;Inter&quot;, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
+    font-weight: 900;
+    font-size: 76px;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    color: #eafff5;
+  }
+  .sub {
+    position: absolute;
+    left: 96px;
+    top: 204px;
+    width: 1400px;
+    margin: 0;
+    font-family: &quot;Inter&quot;, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
+    font-weight: 500;
+    font-size: 34px;
+    line-height: 44px;
+    color: #eafff5;
+    white-space: nowrap;
+  }
+  .mono {
+    font-family: &quot;JetBrains Mono&quot;, ui-monospace, &quot;SF Mono&quot;, Menlo, Consolas, monospace;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .wires {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1920px;
+    height: 1080px;
+  }
+  .node {
+    position: absolute;
+    box-sizing: border-box;
+    height: 88px;
+    border: 3px solid #2ec8ff;
+    border-radius: 18px;
+    background: #0f2233;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+  }
+  .node .name {
+    font-family: &quot;Inter&quot;, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
+    font-weight: 900;
+    font-size: 34px;
+    line-height: 40px;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    color: #eafff5;
+  }
+  .node .tag {
+    font-size: 22px;
+    line-height: 28px;
+    color: #7f9bb0;
+  }
+  .node.save {
+    border-color: #39ff9c;
+    background: rgba(57, 255, 156, 0.15);
+    box-shadow: 0 0 22px rgba(57, 255, 156, 0.55);
+  }
+  .centre {
+    position: absolute;
+    left: 800px;
+    top: 516px;
+    width: 320px;
+    height: 32px;
+    font-size: 22px;
+    line-height: 32px;
+    color: #2ec8ff;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .foot, .page {
+    position: absolute;
+    top: 956px;
+    height: 28px;
+    margin: 0;
+    font-size: 20px;
+    line-height: 28px;
+    color: #7f9bb0;
+    white-space: nowrap;
+  }
+  .foot { left: 96px; width: 900px; }
+  .page { left: 1624px; width: 200px; text-align: right; }
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;slide&quot;&gt;
+  &lt;h1 class=&quot;title&quot;&gt;The style loop&lt;/h1&gt;
+  &lt;p class=&quot;sub&quot;&gt;Each round refines the style prompt.&lt;/p&gt;
+
+  &lt;svg class=&quot;wires&quot; viewBox=&quot;0 0 1920 1080&quot; width=&quot;1920&quot; height=&quot;1080&quot; aria-hidden=&quot;true&quot;&gt;
+    &lt;defs&gt;
+      &lt;marker id=&quot;blue&quot; viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;5&quot; markerHeight=&quot;5&quot; orient=&quot;auto&quot; markerUnits=&quot;strokeWidth&quot;&gt;
+        &lt;path d=&quot;M0,0 L10,5 L0,10 z&quot; fill=&quot;#2ec8ff&quot;/&gt;
+      &lt;/marker&gt;
+      &lt;marker id=&quot;green&quot; viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;5&quot; markerHeight=&quot;5&quot; orient=&quot;auto&quot; markerUnits=&quot;strokeWidth&quot;&gt;
+        &lt;path d=&quot;M0,0 L10,5 L0,10 z&quot; fill=&quot;#39ff9c&quot;/&gt;
+      &lt;/marker&gt;
+      &lt;marker id=&quot;yellow&quot; viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;3.5&quot; markerHeight=&quot;3.5&quot; orient=&quot;auto&quot; markerUnits=&quot;strokeWidth&quot;&gt;
+        &lt;path d=&quot;M0,0 L10,5 L0,10 z&quot; fill=&quot;#e8ff3a&quot;/&gt;
+      &lt;/marker&gt;
+      &lt;filter id=&quot;glowY&quot; x=&quot;-50%&quot; y=&quot;-50%&quot; width=&quot;200%&quot; height=&quot;200%&quot;&gt;
+        &lt;feGaussianBlur in=&quot;SourceGraphic&quot; stdDeviation=&quot;7&quot; result=&quot;b&quot;/&gt;
+        &lt;feComponentTransfer in=&quot;b&quot; result=&quot;bf&quot;&gt;&lt;feFuncA type=&quot;linear&quot; slope=&quot;0.55&quot;/&gt;&lt;/feComponentTransfer&gt;
+        &lt;feMerge&gt;&lt;feMergeNode in=&quot;bf&quot;/&gt;&lt;feMergeNode in=&quot;SourceGraphic&quot;/&gt;&lt;/feMerge&gt;
+      &lt;/filter&gt;
+      &lt;filter id=&quot;glowG&quot; x=&quot;-50%&quot; y=&quot;-50%&quot; width=&quot;200%&quot; height=&quot;200%&quot;&gt;
+        &lt;feGaussianBlur in=&quot;SourceGraphic&quot; stdDeviation=&quot;5&quot; result=&quot;b&quot;/&gt;
+        &lt;feComponentTransfer in=&quot;b&quot; result=&quot;bf&quot;&gt;&lt;feFuncA type=&quot;linear&quot; slope=&quot;0.55&quot;/&gt;&lt;/feComponentTransfer&gt;
+        &lt;feMerge&gt;&lt;feMergeNode in=&quot;bf&quot;/&gt;&lt;feMergeNode in=&quot;SourceGraphic&quot;/&gt;&lt;/feMerge&gt;
+      &lt;/filter&gt;
+    &lt;/defs&gt;
+
+    &lt;!-- clockwise cycle on a 280 px radius circle centred at (960, 612) --&gt;
+    &lt;g stroke=&quot;#2ec8ff&quot; stroke-width=&quot;3&quot; stroke-linecap=&quot;round&quot; fill=&quot;none&quot; marker-end=&quot;url(#blue)&quot;&gt;
+      &lt;path d=&quot;M1120.6,382.6 A280,280 0 0 1 1235.3,561.0&quot;/&gt;
+      &lt;path d=&quot;M1235.3,663.0 A280,280 0 0 1 1120.6,841.4&quot;/&gt;
+      &lt;path d=&quot;M799.4,841.4 A280,280 0 0 1 684.7,663.0&quot;/&gt;
+      &lt;path d=&quot;M684.7,561.0 A280,280 0 0 1 799.4,382.6&quot;/&gt;
+    &lt;/g&gt;
+
+    &lt;!-- takeaway: RE-RENDER back to COMMENT --&gt;
+    &lt;path d=&quot;M836,626 C930,640 930,760 882,838&quot; stroke=&quot;#e8ff3a&quot; stroke-width=&quot;6&quot; stroke-linecap=&quot;round&quot; fill=&quot;none&quot; marker-end=&quot;url(#yellow)&quot; filter=&quot;url(#glowY)&quot;/&gt;
+
+    &lt;!-- exit: RE-RENDER out to SAVE --&gt;
+    &lt;path d=&quot;M530,612 L306,612 Q290,612 290,628 L290,764&quot; stroke=&quot;#39ff9c&quot; stroke-width=&quot;3&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; fill=&quot;none&quot; marker-end=&quot;url(#green)&quot; filter=&quot;url(#glowG)&quot;/&gt;
+  &lt;/svg&gt;
+
+  &lt;div class=&quot;centre mono&quot;&gt;claude -p, headless&lt;/div&gt;
+
+  &lt;div class=&quot;node&quot; style=&quot;left: 680px; top: 288px; width: 560px;&quot;&gt;
+    &lt;span class=&quot;name&quot;&gt;Describe&lt;/span&gt;
+    &lt;span class=&quot;tag mono&quot;&gt;neon, smooth camera, room for humour&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;node&quot; style=&quot;left: 1110px; top: 568px; width: 260px;&quot;&gt;
+    &lt;span class=&quot;name&quot;&gt;Sample&lt;/span&gt;
+    &lt;span class=&quot;tag mono&quot;&gt;~10 s render&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;node&quot; style=&quot;left: 780px; top: 848px; width: 360px;&quot;&gt;
+    &lt;span class=&quot;name&quot;&gt;Comment&lt;/span&gt;
+    &lt;span class=&quot;tag mono&quot;&gt;&quot;contrast too low&quot;&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;node&quot; style=&quot;left: 530px; top: 568px; width: 300px;&quot;&gt;
+    &lt;span class=&quot;name&quot;&gt;Re-render&lt;/span&gt;
+    &lt;span class=&quot;tag mono&quot;&gt;via headless agent&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;node save&quot; style=&quot;left: 150px; top: 772px; width: 280px;&quot;&gt;
+    &lt;span class=&quot;name&quot;&gt;Save&lt;/span&gt;
+    &lt;span class=&quot;tag mono&quot;&gt;v1, v2... clone&lt;/span&gt;
+  &lt;/div&gt;
+
+  &lt;p class=&quot;foot mono&quot;&gt;*Repeat until it stops looking meh.&lt;/p&gt;
+  &lt;p class=&quot;page mono&quot;&gt;05 / 06&lt;/p&gt;
+&lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+</section>
+<section class="slide" id="s6" data-scene="s6" aria-label="Slide 6: ONE STYLE, EVERY FORMAT">
+<iframe title="ONE STYLE, EVERY FORMAT" tabindex="-1" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;title&gt;One style, every format&lt;/title&gt;
+&lt;style&gt;
+  html, body {
+    margin: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    background: #05080d;
+  }
+  .slide {
+    position: relative;
+    width: 1920px;
+    height: 1080px;
+    background-color: #05080d;
+    background-image:
+      linear-gradient(to right, rgba(18, 58, 77, 0.12) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(18, 58, 77, 0.12) 1px, transparent 1px);
+    background-size: 48px 48px;
+    color: #eafff5;
+  }
+  .title {
+    position: absolute;
+    left: 96px;
+    top: 96px;
+    width: 1400px;
+    margin: 0;
+    font-family: &quot;Inter&quot;, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
+    font-weight: 900;
+    font-size: 76px;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    color: #eafff5;
+  }
+  .sub {
+    position: absolute;
+    left: 96px;
+    top: 204px;
+    width: 1400px;
+    margin: 0;
+    font-family: &quot;Inter&quot;, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
+    font-weight: 500;
+    font-size: 34px;
+    line-height: 44px;
+    color: #eafff5;
+    white-space: nowrap;
+  }
+  .mono {
+    font-family: &quot;JetBrains Mono&quot;, ui-monospace, &quot;SF Mono&quot;, Menlo, Consolas, monospace;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .art {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1920px;
+    height: 1080px;
+  }
+  .t {
+    position: absolute;
+    margin: 0;
+    white-space: nowrap;
+  }
+  .head {
+    left: 128px;
+    top: 306px;
+    width: 960px;
+    height: 36px;
+    font-size: 26px;
+    line-height: 36px;
+    color: #2ec8ff;
+  }
+  .label {
+    left: 160px;
+    width: 640px;
+    height: 36px;
+    font-size: 26px;
+    line-height: 36px;
+    color: #eafff5;
+  }
+  .tag {
+    left: 872px;
+    width: 240px;
+    height: 32px;
+    font-size: 22px;
+    line-height: 32px;
+    text-align: right;
+    color: #39ff9c;
+  }
+  .tag.base { color: #7f9bb0; }
+  .fmt {
+    left: 1592px;
+    width: 232px;
+    height: 32px;
+    font-size: 22px;
+    line-height: 32px;
+    color: #eafff5;
+  }
+  .fmt.here { color: #e8ff3a; }
+  .foot, .page {
+    position: absolute;
+    top: 956px;
+    height: 28px;
+    margin: 0;
+    font-size: 20px;
+    line-height: 28px;
+    color: #7f9bb0;
+    white-space: nowrap;
+  }
+  .foot { left: 96px; width: 900px; }
+  .page { left: 1624px; width: 200px; text-align: right; }
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;slide&quot;&gt;
+  &lt;h1 class=&quot;title&quot;&gt;One style, every format&lt;/h1&gt;
+  &lt;p class=&quot;sub&quot;&gt;Extends Google's DESIGN.md with what it lacks.&lt;/p&gt;
+
+  &lt;svg class=&quot;art&quot; viewBox=&quot;0 0 1920 1080&quot; width=&quot;1920&quot; height=&quot;1080&quot; aria-hidden=&quot;true&quot;&gt;
+    &lt;defs&gt;
+      &lt;marker id=&quot;blue&quot; viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;5&quot; markerHeight=&quot;5&quot; orient=&quot;auto&quot; markerUnits=&quot;strokeWidth&quot;&gt;
+        &lt;path d=&quot;M0,0 L10,5 L0,10 z&quot; fill=&quot;#2ec8ff&quot;/&gt;
+      &lt;/marker&gt;
+      &lt;filter id=&quot;glowY&quot; x=&quot;-50%&quot; y=&quot;-50%&quot; width=&quot;200%&quot; height=&quot;200%&quot;&gt;
+        &lt;feGaussianBlur in=&quot;SourceGraphic&quot; stdDeviation=&quot;7&quot; result=&quot;b&quot;/&gt;
+        &lt;feComponentTransfer in=&quot;b&quot; result=&quot;bf&quot;&gt;&lt;feFuncA type=&quot;linear&quot; slope=&quot;0.55&quot;/&gt;&lt;/feComponentTransfer&gt;
+        &lt;feMerge&gt;&lt;feMergeNode in=&quot;bf&quot;/&gt;&lt;feMergeNode in=&quot;SourceGraphic&quot;/&gt;&lt;/feMerge&gt;
+      &lt;/filter&gt;
+    &lt;/defs&gt;
+
+    &lt;!-- file card with folded top-right corner --&gt;
+    &lt;path d=&quot;M114,288.5 H1128 L1175.5,336 V886 A18,18 0 0 1 1157.5,903.5 H114 A18,18 0 0 1 96.5,886 V306 A18,18 0 0 1 114,288.5 Z&quot;
+          fill=&quot;#0f2233&quot; stroke=&quot;#2ec8ff&quot; stroke-width=&quot;1&quot;/&gt;
+    &lt;path d=&quot;M1128,288.5 V336 H1175.5 Z&quot; fill=&quot;#1d4a63&quot; stroke=&quot;#2ec8ff&quot; stroke-width=&quot;1&quot; stroke-linejoin=&quot;round&quot;/&gt;
+    &lt;line x1=&quot;97&quot; y1=&quot;360.5&quot; x2=&quot;1175&quot; y2=&quot;360.5&quot; stroke=&quot;#2ec8ff&quot; stroke-width=&quot;1&quot;/&gt;
+
+    &lt;!-- rows --&gt;
+    &lt;rect x=&quot;129.5&quot; y=&quot;393.5&quot; width=&quot;1013&quot; height=&quot;77&quot; rx=&quot;10&quot; fill=&quot;#0b1622&quot; stroke=&quot;#2ec8ff&quot; stroke-width=&quot;3&quot;/&gt;
+    &lt;g fill=&quot;rgba(57,255,156,0.15)&quot; stroke=&quot;#2ec8ff&quot; stroke-width=&quot;3&quot;&gt;
+      &lt;rect x=&quot;129.5&quot; y=&quot;491.5&quot; width=&quot;1013&quot; height=&quot;77&quot; rx=&quot;10&quot;/&gt;
+      &lt;rect x=&quot;129.5&quot; y=&quot;589.5&quot; width=&quot;1013&quot; height=&quot;77&quot; rx=&quot;10&quot;/&gt;
+      &lt;rect x=&quot;129.5&quot; y=&quot;687.5&quot; width=&quot;1013&quot; height=&quot;77&quot; rx=&quot;10&quot;/&gt;
+      &lt;rect x=&quot;129.5&quot; y=&quot;785.5&quot; width=&quot;1013&quot; height=&quot;77&quot; rx=&quot;10&quot;/&gt;
+    &lt;/g&gt;
+
+    &lt;!-- connectors --&gt;
+    &lt;g stroke=&quot;#2ec8ff&quot; stroke-width=&quot;3&quot; stroke-linecap=&quot;round&quot; fill=&quot;none&quot; marker-end=&quot;url(#blue)&quot;&gt;
+      &lt;line x1=&quot;1192&quot; y1=&quot;368&quot; x2=&quot;1366&quot; y2=&quot;368&quot;/&gt;
+      &lt;line x1=&quot;1192&quot; y1=&quot;520&quot; x2=&quot;1360&quot; y2=&quot;520&quot;/&gt;
+      &lt;line x1=&quot;1192&quot; y1=&quot;672&quot; x2=&quot;1366&quot; y2=&quot;672&quot;/&gt;
+      &lt;line x1=&quot;1192&quot; y1=&quot;824&quot; x2=&quot;1366&quot; y2=&quot;824&quot;/&gt;
+    &lt;/g&gt;
+
+    &lt;!-- video: frame + play triangle --&gt;
+    &lt;rect x=&quot;1401.5&quot; y=&quot;324.5&quot; width=&quot;137&quot; height=&quot;87&quot; rx=&quot;10&quot; fill=&quot;none&quot; stroke=&quot;#39ff9c&quot; stroke-width=&quot;3&quot;/&gt;
+    &lt;path d=&quot;M1460,352 L1460,384 L1488,368 Z&quot; fill=&quot;#39ff9c&quot; stroke=&quot;#39ff9c&quot; stroke-width=&quot;3&quot; stroke-linejoin=&quot;round&quot;/&gt;
+
+    &lt;!-- deck: 16:9 frame + three lines, with highlight ring --&gt;
+    &lt;rect x=&quot;1383&quot; y=&quot;465&quot; width=&quot;174&quot; height=&quot;110&quot; rx=&quot;18&quot; fill=&quot;none&quot; stroke=&quot;#e8ff3a&quot; stroke-width=&quot;6&quot; filter=&quot;url(#glowY)&quot;/&gt;
+    &lt;rect x=&quot;1399.5&quot; y=&quot;481.5&quot; width=&quot;141&quot; height=&quot;77&quot; rx=&quot;10&quot; fill=&quot;none&quot; stroke=&quot;#39ff9c&quot; stroke-width=&quot;3&quot;/&gt;
+    &lt;g stroke=&quot;#39ff9c&quot; stroke-width=&quot;6&quot; stroke-linecap=&quot;round&quot;&gt;
+      &lt;line x1=&quot;1418&quot; y1=&quot;502&quot; x2=&quot;1500&quot; y2=&quot;502&quot;/&gt;
+      &lt;line x1=&quot;1418&quot; y1=&quot;520&quot; x2=&quot;1522&quot; y2=&quot;520&quot;/&gt;
+      &lt;line x1=&quot;1418&quot; y1=&quot;538&quot; x2=&quot;1478&quot; y2=&quot;538&quot;/&gt;
+    &lt;/g&gt;
+
+    &lt;!-- one-pager: tall page with a grid of panels --&gt;
+    &lt;rect x=&quot;1439.5&quot; y=&quot;625.5&quot; width=&quot;61&quot; height=&quot;93&quot; rx=&quot;10&quot; fill=&quot;none&quot; stroke=&quot;#39ff9c&quot; stroke-width=&quot;3&quot;/&gt;
+    &lt;g fill=&quot;#39ff9c&quot;&gt;
+      &lt;rect x=&quot;1448&quot; y=&quot;634&quot; width=&quot;20&quot; height=&quot;20&quot; rx=&quot;3&quot;/&gt;
+      &lt;rect x=&quot;1472&quot; y=&quot;634&quot; width=&quot;20&quot; height=&quot;20&quot; rx=&quot;3&quot;/&gt;
+      &lt;rect x=&quot;1448&quot; y=&quot;662&quot; width=&quot;20&quot; height=&quot;20&quot; rx=&quot;3&quot;/&gt;
+      &lt;rect x=&quot;1472&quot; y=&quot;662&quot; width=&quot;20&quot; height=&quot;20&quot; rx=&quot;3&quot;/&gt;
+      &lt;rect x=&quot;1448&quot; y=&quot;690&quot; width=&quot;20&quot; height=&quot;20&quot; rx=&quot;3&quot;/&gt;
+      &lt;rect x=&quot;1472&quot; y=&quot;690&quot; width=&quot;20&quot; height=&quot;20&quot; rx=&quot;3&quot;/&gt;
+    &lt;/g&gt;
+
+    &lt;!-- doc: page with text lines --&gt;
+    &lt;rect x=&quot;1439.5&quot; y=&quot;777.5&quot; width=&quot;61&quot; height=&quot;93&quot; rx=&quot;10&quot; fill=&quot;none&quot; stroke=&quot;#39ff9c&quot; stroke-width=&quot;3&quot;/&gt;
+    &lt;g stroke=&quot;#39ff9c&quot; stroke-width=&quot;4&quot; stroke-linecap=&quot;round&quot;&gt;
+      &lt;line x1=&quot;1452&quot; y1=&quot;796&quot; x2=&quot;1488&quot; y2=&quot;796&quot;/&gt;
+      &lt;line x1=&quot;1452&quot; y1=&quot;810&quot; x2=&quot;1488&quot; y2=&quot;810&quot;/&gt;
+      &lt;line x1=&quot;1452&quot; y1=&quot;824&quot; x2=&quot;1480&quot; y2=&quot;824&quot;/&gt;
+      &lt;line x1=&quot;1452&quot; y1=&quot;838&quot; x2=&quot;1488&quot; y2=&quot;838&quot;/&gt;
+      &lt;line x1=&quot;1452&quot; y1=&quot;852&quot; x2=&quot;1472&quot; y2=&quot;852&quot;/&gt;
+    &lt;/g&gt;
+  &lt;/svg&gt;
+
+  &lt;p class=&quot;t mono head&quot;&gt;hitchhikers-guide / DESIGN.md&lt;/p&gt;
+
+  &lt;p class=&quot;t mono label&quot; style=&quot;top: 414px;&quot;&gt;tokens · palette, type&lt;/p&gt;
+  &lt;p class=&quot;t mono tag base&quot; style=&quot;top: 416px;&quot;&gt;DESIGN.md&lt;/p&gt;
+  &lt;p class=&quot;t mono label&quot; style=&quot;top: 512px;&quot;&gt;motion&lt;/p&gt;
+  &lt;p class=&quot;t mono tag&quot; style=&quot;top: 514px;&quot;&gt;added&lt;/p&gt;
+  &lt;p class=&quot;t mono label&quot; style=&quot;top: 610px;&quot;&gt;camera&lt;/p&gt;
+  &lt;p class=&quot;t mono tag&quot; style=&quot;top: 612px;&quot;&gt;added&lt;/p&gt;
+  &lt;p class=&quot;t mono label&quot; style=&quot;top: 708px;&quot;&gt;voice&lt;/p&gt;
+  &lt;p class=&quot;t mono tag&quot; style=&quot;top: 710px;&quot;&gt;added&lt;/p&gt;
+  &lt;p class=&quot;t mono label&quot; style=&quot;top: 806px;&quot;&gt;per-type rules&lt;/p&gt;
+  &lt;p class=&quot;t mono tag&quot; style=&quot;top: 808px;&quot;&gt;added&lt;/p&gt;
+
+  &lt;p class=&quot;t mono fmt&quot; style=&quot;top: 352px;&quot;&gt;video&lt;/p&gt;
+  &lt;p class=&quot;t mono fmt&quot; style=&quot;top: 488px;&quot;&gt;deck&lt;/p&gt;
+  &lt;p class=&quot;t mono fmt here&quot; style=&quot;top: 520px;&quot;&gt;you are here&lt;/p&gt;
+  &lt;p class=&quot;t mono fmt&quot; style=&quot;top: 656px;&quot;&gt;one-pager&lt;/p&gt;
+  &lt;p class=&quot;t mono fmt&quot; style=&quot;top: 808px;&quot;&gt;doc&lt;/p&gt;
+
+  &lt;p class=&quot;foot mono&quot;&gt;*Dogfood: this repo, explained in its own seed style.&lt;/p&gt;
+  &lt;p class=&quot;page mono&quot;&gt;06 / 06&lt;/p&gt;
+&lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+</section>
+<script>
+(() => {
+  const slides = [...document.querySelectorAll('.slide')];
+  let current = 0;
+  function fit() {
+    const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+    const x = (innerWidth - 1920 * s) / 2, y = (innerHeight - 1080 * s) / 2;
+    for (const el of slides) el.style.transform = 'translate(' + x + 'px,' + y + 'px) scale(' + s + ')';
+  }
+  function show(n) {
+    if (!slides.length) return;
+    current = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((el, i) => el.classList.toggle('active', i === current));
+    const id = slides[current].id;
+    if (decodeURIComponent(location.hash.slice(1)) !== id) { try { history.replaceState(null, '', '#' + encodeURIComponent(id)); } catch {} }
+    try { parent.postMessage({ type: 'deck-slide', id, index: current, total: slides.length }, '*'); } catch {}
+  }
+  function fromHash() {
+    const i = slides.findIndex((el) => el.id === decodeURIComponent(location.hash.slice(1)));
+    show(i < 0 ? current : i);
+  }
+  addEventListener('resize', fit);
+  addEventListener('hashchange', fromHash);
+  addEventListener('keydown', (e) => {
+    const step = { ArrowRight: 1, ArrowDown: 1, PageDown: 1, ' ': 1, ArrowLeft: -1, ArrowUp: -1, PageUp: -1 }[e.key];
+    if (step) { e.preventDefault(); show(current + step); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+  });
+  addEventListener('click', (e) => show(current + (e.clientX < innerWidth / 3 ? -1 : 1)));
+  fit();
+  fromHash();
+})();
+</script>
+</body>
+</html>

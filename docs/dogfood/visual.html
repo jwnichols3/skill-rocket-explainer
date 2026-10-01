@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rocket Explainer: Styles Are the Product</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  html { background: #05080d; }
+  body {
+    width: 1600px;
+    overflow-x: hidden;
+    background-color: #05080d;
+    background-image:
+      linear-gradient(rgba(18, 58, 77, 0.12) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(18, 58, 77, 0.12) 1px, transparent 1px);
+    background-size: 48px 48px;
+    color: #eafff5;
+    font-family: "Inter", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 500;
+    padding: 0 96px 72px;
+  }
+  .mono, svg text {
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  svg text.d {
+    font-family: "Inter", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+  }
+  .disp {
+    font-family: "Inter", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+  }
+  .nocase { text-transform: none; }
+
+  /* ---------- headline band ---------- */
+  #s1 {
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    align-items: center;
+    column-gap: 24px;
+    padding: 72px 0 48px;
+  }
+  .kicker { font-size: 22px; color: #2ec8ff; }
+  h1 {
+    margin: 18px 0 28px;
+    font-size: 132px;
+    line-height: 0.94;
+    color: #eafff5;
+  }
+  h1 .hl { color: #39ff9c; text-shadow: 0 0 22px rgba(57, 255, 156, 0.55); }
+  .subline { max-width: 1000px; font-size: 34px; line-height: 1.3; font-weight: 500; color: #eafff5; margin: 0; }
+  .status {
+    display: inline-block;
+    margin-top: 28px;
+    padding: 8px 20px;
+    border: 1px solid #7f9bb0;
+    border-radius: 999px;
+    font-size: 20px;
+    color: #7f9bb0;
+  }
+  .rocket { justify-self: end; display: block; }
+
+  /* ---------- cards ---------- */
+  .row { display: grid; grid-template-columns: 688px 688px; column-gap: 32px; margin-top: 32px; }
+  .row > * { min-width: 0; }
+  .card {
+    background: #0b1622;
+    border: 1px solid rgba(46, 200, 255, 0.4);
+    border-radius: 18px;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .lbl { font-size: 22px; color: #7f9bb0; }
+  .lbl b { color: #2ec8ff; font-weight: 600; }
+  .ctitle { margin: 12px 0 26px; font-size: 40px; line-height: 1.05; color: #eafff5; }
+  .sent { margin: auto 0 0; padding-top: 26px; font-size: 26px; line-height: 1.35; font-weight: 500; color: #eafff5; }
+  .note { margin: 14px 0 0; font-size: 20px; line-height: 1.35; color: #7f9bb0; }
+  svg { display: block; overflow: visible; }
+
+  /* ---------- s2 key term ---------- */
+  .term {
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: #39ff9c;
+    text-decoration: underline 3px #39ff9c;
+    text-underline-offset: 6px;
+  }
+
+  /* ---------- hero ---------- */
+  #s4 {
+    margin-top: 32px;
+    background: #0f2233;
+    border: 2px solid #2ec8ff;
+    box-shadow: 0 0 22px rgba(46, 200, 255, 0.35);
+  }
+  #s4 .ctitle { font-size: 76px; margin-bottom: 20px; }
+  .loop { position: relative; width: 1344px; height: 820px; }
+  .loop > svg { position: absolute; left: 0; top: 0; }
+  .nb { position: absolute; display: flex; flex-direction: column; gap: 8px; }
+  .nb.c { align-items: center; text-align: center; }
+  .nb.l { align-items: flex-start; text-align: left; }
+  .nb.r { align-items: flex-end; text-align: right; }
+  .nt { display: flex; align-items: center; gap: 10px; font-size: 28px; line-height: 1.1; color: #eafff5; }
+  .ns { font-size: 20px; line-height: 1.3; color: #7f9bb0; }
+  .icons { display: flex; gap: 8px; margin-top: 2px; }
+  .bubs { display: flex; flex-direction: column; gap: 16px; width: 100%; }
+  .bub {
+    position: relative;
+    width: max-content;
+    padding: 7px 14px;
+    border: 2px solid #2ec8ff;
+    border-radius: 14px;
+    background: #0b1622;
+    font-size: 20px;
+    color: #eafff5;
+  }
+  .bub::after {
+    content: "";
+    position: absolute;
+    left: 22px;
+    bottom: -9px;
+    width: 14px;
+    height: 14px;
+    background: #0b1622;
+    border-right: 2px solid #2ec8ff;
+    border-bottom: 2px solid #2ec8ff;
+    transform: rotate(45deg);
+  }
+  .bub.a { align-self: flex-start; margin-left: 40px; }
+  .bub.b { align-self: flex-end; margin-right: 20px; }
+  .bub.b::after { left: auto; right: 22px; }
+  #s4 .sent { font-size: 34px; text-align: center; max-width: 1200px; margin: 0 auto; padding-top: 12px; }
+
+  /* ---------- s5 anatomy ---------- */
+  .anatwrap { position: relative; padding-right: 24px; }
+  .anat { display: grid; grid-template-columns: 150px 1fr; column-gap: 14px; row-gap: 10px; }
+  .ftab {
+    justify-self: start;
+    padding: 8px 14px;
+    border: 1px solid #2ec8ff;
+    border-bottom: 0;
+    border-radius: 10px 10px 0 0;
+    background: #0f2233;
+    font-size: 20px;
+    color: #39ff9c;
+    margin-bottom: -10px;
+  }
+  .brk {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 14px;
+    border-right: 3px solid currentColor;
+    text-align: right;
+    font-size: 20px;
+    line-height: 1.3;
+  }
+  .brk::before, .brk::after {
+    content: "";
+    position: absolute;
+    right: -13px;
+    width: 10px;
+    border-top: 3px solid currentColor;
+  }
+  .brk::before { top: 0; }
+  .brk::after { bottom: 0; }
+  .brk.m { color: #7f9bb0; }
+  .brk.g { color: #39ff9c; }
+  .grp { display: flex; flex-direction: column; gap: 10px; }
+  .blk {
+    padding: 12px 14px;
+    border: 1px solid #2ec8ff;
+    border-radius: 10px;
+    background: #0f2233;
+  }
+  .bl { font-size: 20px; color: #2ec8ff; margin-bottom: 10px; }
+  .flow { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+  .sw { display: inline-flex; align-items: center; gap: 8px; font-size: 20px; color: #7f9bb0; }
+  .sw i { display: inline-block; width: 26px; height: 26px; border-radius: 50%; }
+  .sw i.ring { border: 3px solid #7f9bb0; }
+  .mc {
+    display: inline-block;
+    padding: 3px 10px;
+    border: 1px solid rgba(46, 200, 255, 0.5);
+    border-radius: 999px;
+    font-size: 20px;
+    color: #eafff5;
+  }
+  .flow.chips { gap: 8px; margin-top: 10px; }
+  .trio { display: flex; gap: 10px; height: 100%; }
+  .trio .blk { flex: 1; border: 3px solid #39ff9c; display: flex; flex-direction: column; justify-content: center; gap: 10px; padding: 10px; }
+  .trio .bl { margin: 0; color: #eafff5; }
+  .added {
+    align-self: flex-start;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(57, 255, 156, 0.15);
+    color: #39ff9c;
+    font-size: 20px;
+  }
+  .tabs { display: flex; gap: 6px; border-bottom: 1px solid #2ec8ff; }
+  .tabs span {
+    padding: 4px 10px;
+    border: 1px solid #2ec8ff;
+    border-bottom: 0;
+    border-radius: 8px 8px 0 0;
+    font-size: 20px;
+    color: #eafff5;
+  }
+  .att { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; margin-top: 18px; }
+  .ac {
+    position: relative;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+    border: 1px solid #2ec8ff;
+    border-radius: 10px;
+    background: #0f2233;
+    font-size: 20px;
+    color: #eafff5;
+  }
+  .ac::after {
+    content: "";
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    width: 13px;
+    border-top: 2px solid #2ec8ff;
+  }
+  .rail {
+    position: absolute;
+    right: 10px;
+    width: 14px;
+    top: 30%;
+    bottom: 25px;
+    border-top: 2px solid #2ec8ff;
+    border-right: 2px solid #2ec8ff;
+    border-top-right-radius: 8px;
+  }
+
+  /* ---------- s6 prior art ---------- */
+  .row4 { grid-template-rows: auto auto; row-gap: 18px; }
+  #s5 { grid-column: 1; grid-row: 1; }
+  #s6 { grid-column: 2; grid-row: 1 / span 2; display: grid; grid-template-rows: subgrid; }
+  .aside { margin: 0; font-size: 20px; line-height: 1.35; color: #7f9bb0; text-align: right; }
+  .cols { display: grid; grid-template-columns: 1fr 2px 240px; column-gap: 18px; }
+  .divider { background: rgba(46, 200, 255, 0.4); }
+  .colh { font-size: 20px; margin-bottom: 16px; }
+  .pgrp { display: grid; grid-template-columns: auto auto; column-gap: 18px; align-items: center; justify-content: start; margin-bottom: 22px; }
+  .tiles { display: grid; gap: 6px; }
+  .tiles.t7 { grid-template-columns: repeat(7, 22px); }
+  .tiles.t5 { grid-template-columns: repeat(5, 22px); }
+  .tiles i { display: block; width: 22px; height: 22px; border-radius: 4px; background: rgba(127, 155, 176, 0.4); }
+  .big { font-size: 64px; line-height: 1; color: #eafff5; }
+  .fixed { display: flex; align-items: center; gap: 6px; font-size: 20px; color: #7f9bb0; margin-top: 4px; }
+  .pcap { grid-column: 1 / -1; margin-top: 10px; font-size: 20px; line-height: 1.3; color: #7f9bb0; }
+  .loopcap { font-size: 20px; line-height: 1.35; color: #7f9bb0; text-align: center; margin-top: 12px; }
+  .loopname { font-size: 22px; color: #39ff9c; text-align: center; margin-top: 8px; }
+  .pipe { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 20px; color: #7f9bb0; }
+  .pipe span.bx { padding: 4px 10px; border: 1px solid #7f9bb0; border-radius: 6px; }
+  .pipe-ok { display: flex; align-items: flex-start; gap: 10px; margin-top: 12px; font-size: 20px; line-height: 1.3; color: #7f9bb0; }
+  .pipe-ok svg { flex: none; margin-top: 2px; }
+  .quote {
+    margin: 18px 0 0;
+    font-size: 46px;
+    line-height: 1.05;
+    color: #39ff9c;
+    text-shadow: 0 0 22px rgba(57, 255, 156, 0.55);
+  }
+  #s6 .sent { margin-top: auto; }
+</style>
+</head>
+<body>
+
+<!-- ================= s1: headline band ================= -->
+<section id="s1" data-scene="s1">
+  <div>
+    <div class="kicker mono">ROCKET EXPLAINER // FIELD GUIDE ENTRY</div>
+    <h1 class="disp"><span class="hl">Styles</span> are<br>the product.</h1>
+    <p class="subline">A /explainer skill that turns a meeting, a paper or a folder into an explainer, in a style you've trained.</p>
+    <div class="status mono">INTENT, NOT SHIPPED · decisions recorded 2026-10-01 · ready for to-spec</div>
+  </div>
+  <svg class="rocket" width="240" height="270" viewBox="0 0 240 270" aria-label="rocket">
+    <circle cx="120" cy="125" r="112" fill="#39ff9c" fill-opacity="0.1"/>
+    <path d="M85 140 L56 190 L85 178 Z" fill="#0b1622" stroke="#39ff9c" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M155 140 L184 190 L155 178 Z" fill="#0b1622" stroke="#39ff9c" stroke-width="3" stroke-linejoin="round"/>
+    <rect x="85" y="24" width="70" height="168" rx="35" fill="#0b1622" stroke="#39ff9c" stroke-width="3"/>
+    <circle cx="120" cy="86" r="17" fill="#0f2233" stroke="#2ec8ff" stroke-width="3"/>
+    <circle cx="120" cy="212" r="9" fill="#2ec8ff" fill-opacity="0.9"/>
+    <circle cx="120" cy="236" r="6.5" fill="#2ec8ff" fill-opacity="0.55"/>
+    <circle cx="120" cy="256" r="4.5" fill="#2ec8ff" fill-opacity="0.25"/>
+  </svg>
+</section>
+
+<!-- ================= row 2 ================= -->
+<div class="row">
+  <!-- s2: what it is -->
+  <section id="s2" data-scene="s2" class="card">
+    <div class="lbl mono"><b>01</b> // WHAT IT IS</div>
+    <h2 class="ctitle disp">Any source in, four outputs out</h2>
+    <svg width="624" height="460" viewBox="0 0 624 460" aria-label="source to output flow">
+      <!-- THE KEY TERM: enlarged terminal pill with an afterglow ring; clear zone x 84-456, y 0-156 -->
+      <ellipse cx="270" cy="78" rx="176" ry="66" fill="#39ff9c" fill-opacity="0.05"/>
+      <rect x="108" y="24" width="324" height="108" rx="54" fill="none" stroke="#39ff9c" stroke-opacity="0.3" stroke-width="2"/>
+      <rect x="120" y="36" width="300" height="84" rx="42" fill="#0f2233"/>
+      <rect x="120" y="36" width="300" height="84" rx="42" fill="#39ff9c" fill-opacity="0.15"/>
+      <rect x="120" y="36" width="300" height="84" rx="42" fill="none" stroke="#39ff9c" stroke-width="6" style="filter: drop-shadow(0 0 11px rgba(57,255,156,0.55))"/>
+      <text x="270" y="90" font-size="34" fill="#39ff9c" text-anchor="middle" style="filter: drop-shadow(0 0 6px rgba(57,255,156,0.45))">&gt; /explainer</text>
+
+      <!-- sources -->
+      <g fill="none" stroke="#39ff9c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+        <rect x="4" y="172" width="40" height="27" rx="7"/>
+        <path d="M13 199 L10 208 L23 199"/>
+        <rect x="10" y="240" width="28" height="34" rx="3"/>
+        <path d="M16 250 H32 M16 257 H32 M16 264 H28" stroke-width="2"/>
+        <path d="M4 314 H17 L22 320 H44 V343 H4 Z"/>
+      </g>
+      <g font-size="20" fill="#7f9bb0">
+        <text x="0" y="232">meeting</text>
+        <text x="0" y="298">paper</text>
+        <text x="0" y="368">folder</text>
+      </g>
+      <g font-size="20" fill="#7f9bb0">
+        <text x="0" y="404">anything</text>
+        <text x="0" y="428">the agent</text>
+        <text x="0" y="452">can reach</text>
+      </g>
+      <!-- sources converge up and right into the pill (stopping at the clear zone) -->
+      <g fill="none" stroke="#2ec8ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M54 186 H128"/>
+        <path d="M48 257 H128"/>
+        <path d="M54 329 H128 V174"/>
+      </g>
+      <polygon points="128,160 121,173 135,173" fill="#2ec8ff"/>
+
+      <!-- short vertical connector: pill to browser -->
+      <path d="M270 160 V176" stroke="#2ec8ff" stroke-width="3" stroke-linecap="round"/>
+      <polygon points="270,188 263,176 277,176" fill="#2ec8ff"/>
+
+      <!-- browser window -->
+      <rect x="150" y="188" width="240" height="204" rx="18" fill="#0f2233" stroke="#2ec8ff" stroke-width="2"/>
+      <path d="M150 224 H390" stroke="#2ec8ff" stroke-width="1.5" stroke-opacity="0.6"/>
+      <circle cx="168" cy="206" r="4.5" fill="#7f9bb0"/>
+      <circle cx="182" cy="206" r="4.5" fill="#7f9bb0"/>
+      <circle cx="196" cy="206" r="4.5" fill="#7f9bb0"/>
+      <text x="210" y="213" font-size="20" fill="#eafff5">local web app</text>
+      <rect x="164" y="234" width="212" height="30" rx="15" fill="#05080d" stroke="#7f9bb0" stroke-width="1"/>
+      <text x="270" y="256" font-size="20" fill="#7f9bb0" text-anchor="middle">127.0.0.1</text>
+      <path d="M190 300 A12 12 0 1 1 184 289.6" fill="none" stroke="#2ec8ff" stroke-width="3" stroke-linecap="round"/>
+      <polygon points="180,283 192,288 183,296" fill="#2ec8ff"/>
+      <g font-size="20" fill="#eafff5">
+        <text x="202" y="300">comments →</text>
+        <text x="202" y="324">re-render via</text>
+        <text x="202" y="348">headless</text>
+        <text x="202" y="372">claude -p</text>
+      </g>
+
+      <!-- fan out to outputs -->
+      <g fill="none" stroke="#2ec8ff" stroke-width="2">
+        <path d="M390 290 C422 290 414 188 446 188"/>
+        <path d="M390 290 C422 290 414 256 446 256"/>
+        <path d="M390 290 C422 290 414 324 446 324"/>
+        <path d="M390 290 C422 290 414 392 446 392"/>
+      </g>
+      <g fill="#2ec8ff">
+        <polygon points="458,188 446,182 446,194"/>
+        <polygon points="458,256 446,250 446,262"/>
+        <polygon points="458,324 446,318 446,330"/>
+        <polygon points="458,392 446,386 446,398"/>
+      </g>
+      <!-- output tiles -->
+      <g fill="#0f2233" stroke="#2ec8ff" stroke-width="1">
+        <rect x="458.5" y="158.5" width="165" height="59" rx="10"/>
+        <rect x="458.5" y="226.5" width="165" height="59" rx="10"/>
+        <rect x="458.5" y="294.5" width="165" height="59" rx="10"/>
+        <rect x="458.5" y="362.5" width="165" height="59" rx="10"/>
+      </g>
+      <g fill="none" stroke="#39ff9c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round">
+        <polygon points="470,166 470,184 485,175"/>
+        <rect x="474" y="232" width="16" height="12" rx="2"/>
+        <rect x="469" y="237" width="16" height="12" rx="2" fill="#0f2233"/>
+        <rect x="471" y="299" width="16" height="22" rx="2"/>
+        <circle cx="479" cy="307" r="3.5"/>
+        <path d="M474 316 H484"/>
+        <path d="M470 367 H481 L486 372 V389 H470 Z"/>
+        <path d="M481 367 V372 H486"/>
+      </g>
+      <g font-size="20" fill="#eafff5">
+        <text class="d" x="496" y="183">VIDEO</text>
+        <text class="d" x="496" y="251">DECK</text>
+        <text class="d" x="496" y="319">VISUAL</text>
+        <text class="d" x="496" y="387">DOC</text>
+      </g>
+      <g font-size="20" fill="#7f9bb0">
+        <text x="468" y="209">MP4</text>
+        <text x="468" y="277">HTML + .pptx</text>
+        <text x="468" y="345">PNG</text>
+        <text x="468" y="413">PDF</text>
+      </g>
+    </svg>
+    <p class="sent">Point <span class="term">/explainer</span> at anything the agent can reach; a local web app runs the loop and produces one of four outputs.</p>
+  </section>
+
+  <!-- s3: why styles -->
+  <section id="s3" data-scene="s3" class="card">
+    <div class="lbl mono"><b>02</b> // WHY STYLES</div>
+    <h2 class="ctitle disp">Quality is a style problem</h2>
+    <svg width="624" height="300" viewBox="0 0 624 300" aria-label="qualitative bar chart">
+      <g font-size="22" fill="#eafff5">
+        <text x="0" y="44">Opus 5</text>
+        <text x="0" y="122">Fable 5.1</text>
+        <text x="0" y="240">Opus 5.5 +</text>
+        <text x="0" y="266">refined style</text>
+      </g>
+      <!-- tracks -->
+      <g fill="#0f2233">
+        <rect x="210" y="18" width="414" height="36" rx="8"/>
+        <rect x="210" y="96" width="414" height="36" rx="8"/>
+        <rect x="210" y="226" width="414" height="36" rx="8"/>
+      </g>
+      <!-- row 1 -->
+      <rect x="210" y="18" width="103" height="36" rx="8" fill="#7f9bb0"/>
+      <text x="325" y="44" font-size="20" fill="#7f9bb0">meh</text>
+      <!-- row 2 -->
+      <rect x="210" y="96" width="373" height="36" rx="8" fill="#39ff9c" style="filter: drop-shadow(0 0 11px rgba(57,255,156,0.55))"/>
+      <text x="575" y="160" font-size="20" fill="#39ff9c" text-anchor="end">dramatic step up</text>
+      <!-- row 3 -->
+      <text x="575" y="194" font-size="20" fill="#2ec8ff" text-anchor="end">the style closes this gap</text>
+      <path d="M418 216 V206 H583 V216" fill="none" stroke="#2ec8ff" stroke-width="2.5"/>
+      <rect x="419.5" y="227.5" width="162" height="33" rx="6" fill="none" stroke="#39ff9c" stroke-width="3" stroke-dasharray="9 6"/>
+      <rect x="210" y="226" width="210" height="36" rx="8" fill="#39ff9c"/>
+      <text x="575" y="290" font-size="20" fill="#39ff9c" text-anchor="end">probably matches</text>
+      <!-- alignment guide -->
+      <path d="M583 134 V262" stroke="#2ec8ff" stroke-opacity="0.4" stroke-width="2" stroke-dasharray="2 6" stroke-linecap="round"/>
+    </svg>
+    <p class="note mono">bars show the source's qualitative judgement, not measured data</p>
+    <p class="sent">That's why styles are first-class, iterated assets, not a prompt line.</p>
+  </section>
+</div>
+
+<!-- ================= row 3: hero ================= -->
+<section id="s4" data-scene="s4" class="card">
+  <div class="lbl mono"><b>03</b> // THE STYLE LOOP</div>
+  <h2 class="ctitle disp">How a style gets good</h2>
+  <div class="loop">
+    <svg width="1344" height="820" viewBox="0 0 1344 820" aria-label="the style loop">
+      <!-- ring -->
+      <ellipse cx="672" cy="410" rx="380" ry="220" fill="none" stroke="#2ec8ff" stroke-width="3"/>
+      <g fill="#2ec8ff">
+        <polygon points="-10,-8 10,0 -10,8" transform="translate(672 190)"/>
+        <polygon points="-10,-8 10,0 -10,8" transform="translate(1001.1 300) rotate(45.1)"/>
+        <polygon points="-10,-8 10,0 -10,8" transform="translate(1001.1 520) rotate(134.9)"/>
+        <polygon points="-10,-8 10,0 -10,8" transform="translate(342.9 520) rotate(225.1)"/>
+        <polygon points="-10,-8 10,0 -10,8" transform="translate(342.9 300) rotate(314.9)"/>
+      </g>
+      <!-- the page's only highlight: comment -> re-render, and back -->
+      <g style="filter: drop-shadow(0 0 11px rgba(232,255,58,0.55))">
+        <path d="M862 600.5 A380 220 0 0 1 482 600.5" fill="none" stroke="#e8ff3a" stroke-width="6" stroke-linecap="round"/>
+        <polygon points="-13,-10 11,0 -13,10" transform="translate(672 630) rotate(180)" fill="#e8ff3a"/>
+        <path d="M522 560 Q672 496 812 556" fill="none" stroke="#e8ff3a" stroke-width="4" stroke-linecap="round"/>
+        <polygon points="-14,-9 6,0 -14,9" transform="translate(818 558) rotate(23.1)" fill="#e8ff3a"/>
+        <text x="672" y="506" font-size="20" fill="#e8ff3a" text-anchor="middle">repeat until it's right</text>
+      </g>
+      <!-- nodes -->
+      <g fill="#0b1622" stroke="#39ff9c" stroke-width="3">
+        <circle cx="482" cy="189.5" r="48"/>
+        <circle cx="862" cy="189.5" r="48"/>
+        <circle cx="1052" cy="410" r="48"/>
+        <circle cx="292" cy="410" r="48"/>
+      </g>
+      <g fill="#0b1622" stroke="#e8ff3a" stroke-width="6" style="filter: drop-shadow(0 0 11px rgba(232,255,58,0.55))">
+        <circle cx="862" cy="600.5" r="48"/>
+        <circle cx="482" cy="600.5" r="48"/>
+      </g>
+      <g font-size="40" fill="#39ff9c" text-anchor="middle">
+        <text x="482" y="203.5">1</text>
+        <text x="862" y="203.5">2</text>
+        <text x="1052" y="424">3</text>
+        <text x="862" y="614.5">4</text>
+        <text x="482" y="614.5">5</text>
+        <text x="292" y="424">6</text>
+      </g>
+      <!-- centre: the style prompt grows each round -->
+      <rect x="564" y="292" width="76" height="96" rx="4" fill="#0f2233" stroke="#39ff9c" stroke-width="1.5"/>
+      <rect x="578" y="304" width="84" height="106" rx="4" fill="#0f2233" stroke="#39ff9c" stroke-width="2.25"/>
+      <rect x="592" y="316" width="92" height="116" rx="4" fill="#0f2233" stroke="#39ff9c" stroke-width="3"/>
+      <g stroke="#7f9bb0" stroke-width="2" stroke-linecap="round">
+        <path d="M606 338 H668 M606 354 H660 M606 370 H668 M606 386 H652 M606 402 H668 M606 418 H640"/>
+      </g>
+      <g stroke="#7f9bb0" stroke-width="1.5" fill="none">
+        <path d="M644 294 L696 274"/>
+        <path d="M666 314 L696 324"/>
+        <path d="M688 372 L696 374"/>
+      </g>
+      <g font-size="20" fill="#7f9bb0">
+        <text x="702" y="280">round 1</text>
+        <text x="702" y="330">round 2</text>
+        <text x="702" y="380">round 3</text>
+      </g>
+      <text x="638" y="462" font-size="20" fill="#eafff5" text-anchor="middle">style prompt</text>
+    </svg>
+
+    <!-- 1 describe -->
+    <div class="nb c" style="left:302px; width:360px; bottom:663px;">
+      <div class="nt disp">
+        <svg width="30" height="30" viewBox="0 0 30 30"><g fill="none" stroke="#39ff9c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"><path d="M5 25 L7 18 L20 5 L25 10 L12 23 Z"/><path d="M17 8 L22 13"/></g></svg>
+        Describe
+      </div>
+      <div class="ns mono">"Hitchhiker's Guide, neon blue/green, lively…" (name it now or later)</div>
+    </div>
+    <!-- 2 pick voice -->
+    <div class="nb c" style="left:682px; width:360px; bottom:663px;">
+      <div class="nt disp">
+        <svg width="30" height="30" viewBox="0 0 30 30"><g fill="none" stroke="#39ff9c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"><path d="M4 12 H9 L16 6 V24 L9 18 H4 Z"/><path d="M20 11 Q23 15 20 19"/><path d="M23 7 Q29 15 23 23"/></g></svg>
+        Pick voice
+      </div>
+      <div class="ns mono">TTS provider · character · speed</div>
+    </div>
+    <!-- 3 render sample -->
+    <div class="nb l" style="left:1116px; width:228px; top:410px; transform:translateY(-50%);">
+      <svg width="34" height="30" viewBox="0 0 34 30"><g fill="none" stroke="#39ff9c" stroke-width="2.5" stroke-linejoin="round"><rect x="2" y="3" width="30" height="24" rx="4"/><polygon points="13,9 13,21 23,15"/></g></svg>
+      <div class="nt disp">Render ~10<span class="nocase">&nbsp;s</span> sample</div>
+      <div class="icons">
+        <svg width="28" height="28" viewBox="0 0 28 28"><g fill="none" stroke="#2ec8ff" stroke-width="2"><rect x="3" y="5" width="22" height="5" rx="1"/><rect x="3" y="13" width="15" height="5" rx="1"/><path d="M3 23 H25"/></g></svg>
+        <svg width="28" height="28" viewBox="0 0 28 28"><g fill="none" stroke="#2ec8ff" stroke-width="2"><rect x="3" y="6" width="13" height="13" rx="2"/><rect x="12" y="10" width="13" height="13" rx="2" fill="#0f2233"/></g></svg>
+        <svg width="28" height="28" viewBox="0 0 28 28"><g fill="none" stroke="#2ec8ff" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="22" height="15" rx="4"/><path d="M9 19 L8 25 L14 19"/></g></svg>
+        <svg width="28" height="28" viewBox="0 0 28 28"><rect x="4" y="4" width="20" height="20" rx="4" fill="#39ff9c" fill-opacity="0.15" stroke="#2ec8ff" stroke-width="2"/></svg>
+        <svg width="28" height="28" viewBox="0 0 28 28"><g fill="none" stroke="#2ec8ff" stroke-width="2"><circle cx="7" cy="20" r="4"/><circle cx="21" cy="8" r="4"/><path d="M10 17 L18 11"/></g></svg>
+        <svg width="28" height="28" viewBox="0 0 28 28"><g fill="none" stroke="#2ec8ff" stroke-width="2" stroke-linejoin="round"><rect x="2" y="8" width="17" height="13" rx="2"/><path d="M19 12 L26 8 V21 L19 17 Z"/></g></svg>
+      </div>
+      <div class="ns mono">opening · transition · pop-up · box · diagram · camera</div>
+      <div class="ns mono">exercises everything</div>
+    </div>
+    <!-- 4 comment -->
+    <div class="nb c" style="left:682px; width:360px; top:664px;">
+      <div class="nt disp">Comment</div>
+      <div class="bubs">
+        <div class="bub a mono">"voice is wrong"</div>
+        <div class="bub b mono">"contrast too low"</div>
+      </div>
+    </div>
+    <!-- 5 re-render -->
+    <div class="nb c" style="left:302px; width:360px; top:664px;">
+      <div class="nt disp">
+        <svg width="30" height="30" viewBox="0 0 30 30"><path d="M26 15 A11 11 0 1 1 21 5.8" fill="none" stroke="#39ff9c" stroke-width="2.5" stroke-linecap="round"/><polygon points="17,1 26,5 19,11" fill="#39ff9c"/></svg>
+        Re-render
+      </div>
+      <div class="ns mono">swap voice or model from a dropdown</div>
+    </div>
+    <!-- 6 save -->
+    <div class="nb r" style="left:0; width:230px; top:410px; transform:translateY(-50%);">
+      <div class="nt disp">Save</div>
+      <svg width="230" height="72" viewBox="0 0 230 72" aria-label="version tag">
+        <path d="M36 20 L50 4 H108 V36 H50 Z" fill="#0b1622" stroke="#39ff9c" stroke-width="2.5" stroke-linejoin="round"/>
+        <circle cx="52" cy="20" r="3" fill="#39ff9c"/>
+        <text x="82" y="27" font-size="20" fill="#39ff9c" text-anchor="middle">v3</text>
+        <path d="M108 20 H122 C134 20 132 52 142 52" fill="none" stroke="#2ec8ff" stroke-width="2"/>
+        <path d="M142 52 L154 36 H228 V68 H154 Z" fill="#0b1622" stroke="#39ff9c" stroke-width="2.5" stroke-linejoin="round"/>
+        <circle cx="156" cy="52" r="3" fill="#39ff9c"/>
+        <text x="196" y="59" font-size="20" fill="#39ff9c" text-anchor="middle">clone</text>
+      </svg>
+      <div class="ns mono">named, versioned, cloneable</div>
+    </div>
+  </div>
+  <p class="sent">Describe, pick a voice, render a 10-second sample, comment, re-render, save; each round refines the style prompt.</p>
+</section>
+
+<!-- ================= row 4 ================= -->
+<div class="row row4">
+  <!-- s5: anatomy -->
+  <section id="s5" data-scene="s5" class="card">
+    <div class="lbl mono"><b>04</b> // ANATOMY OF A STYLE</div>
+    <h2 class="ctitle disp">One file, every format</h2>
+    <div class="anatwrap">
+      <div class="anat">
+        <div></div>
+        <div class="ftab mono">hitchhikers.DESIGN.md</div>
+
+        <div class="brk m mono">Google's DESIGN.md: YAML tokens + prose</div>
+        <div class="grp">
+          <div class="blk">
+            <div class="bl mono">YAML TOKENS</div>
+            <div class="flow">
+              <span class="sw mono"><i style="background:#39ff9c"></i>#39ff9c</span>
+              <span class="sw mono"><i style="background:#2ec8ff"></i>#2ec8ff</span>
+              <span class="sw mono"><i class="ring"></i>#e8ff3a</span>
+            </div>
+            <div class="flow chips">
+              <span class="mc mono">type: Inter 900</span>
+              <span class="mc mono">spacing: 8</span>
+            </div>
+          </div>
+          <div class="blk">
+            <div class="bl mono">SHARED IDENTITY</div>
+            <div class="flow" style="gap:8px">
+              <span class="mc mono">palette</span>
+              <span class="mc mono">type</span>
+              <span class="mc mono">tone</span>
+              <span class="mc mono">humour</span>
+              <span class="mc mono">voice</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="brk g mono">what Rocket Explainer adds</div>
+        <div class="trio">
+          <div class="blk"><div class="bl mono">MOTION</div><span class="added mono">added</span></div>
+          <div class="blk"><div class="bl mono">CAMERA</div><span class="added mono">added</span></div>
+          <div class="blk"><div class="bl mono">VOICE</div><span class="added mono">added</span></div>
+        </div>
+
+        <div></div>
+        <div class="blk">
+          <div class="bl mono">PER-TYPE RULES</div>
+          <div class="tabs mono"><span>VIDEO</span><span>DECK</span><span>DOC</span><span>VISUAL</span></div>
+        </div>
+      </div>
+      <div class="att">
+        <div class="ac mono">
+          <svg width="30" height="26" viewBox="0 0 30 26"><g fill="none" stroke="#39ff9c" stroke-width="2.5" stroke-linejoin="round"><rect x="2" y="2" width="26" height="22" rx="4"/><polygon points="11,8 11,18 20,13"/></g></svg>
+          sample render (~10 s)
+        </div>
+        <div class="ac mono">
+          <svg width="30" height="30" viewBox="0 0 30 30"><g fill="none" stroke="#39ff9c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"><path d="M4 12 H9 L16 6 V24 L9 18 H4 Z"/><path d="M20 11 Q23 15 20 19"/><path d="M23 7 Q29 15 23 23"/></g></svg>
+          voice settings
+        </div>
+      </div>
+      <div class="rail"></div>
+    </div>
+    <p class="sent">A style is a named, versioned DESIGN.md: one shared identity, rules per output type, plus motion, camera and voice.</p>
+  </section>
+
+  <!-- s6: prior art -->
+  <section id="s6" data-scene="s6">
+    <div class="card">
+      <div class="lbl mono"><b>05</b> // PRIOR ART</div>
+      <h2 class="ctitle disp">Nobody ships the loop</h2>
+      <div class="cols">
+        <div>
+          <div class="colh mono" style="color:#7f9bb0">EVERYONE ELSE</div>
+          <div class="pgrp">
+            <div class="tiles t7"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div>
+              <div class="big disp">13</div>
+              <div class="fixed mono"><svg width="18" height="22" viewBox="0 0 18 22"><g fill="none" stroke="#7f9bb0" stroke-width="2"><rect x="2" y="9" width="14" height="11" rx="2"/><path d="M5 9 V6 A4 4 0 0 1 13 6 V9"/></g></svg>fixed</div>
+            </div>
+            <div class="pcap mono">HyperFrames presets</div>
+          </div>
+          <div class="pgrp">
+            <div class="tiles t5"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div>
+              <div class="big disp">10</div>
+              <div class="fixed mono"><svg width="18" height="22" viewBox="0 0 18 22"><g fill="none" stroke="#7f9bb0" stroke-width="2"><rect x="2" y="9" width="14" height="11" rx="2"/><path d="M5 9 V6 A4 4 0 0 1 13 6 V9"/></g></svg>fixed</div>
+            </div>
+            <div class="pcap mono">theme-factory themes (Anthropic)</div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div>
+          <div class="colh mono" style="color:#39ff9c">ROCKET EXPLAINER</div>
+          <svg width="240" height="190" viewBox="0 0 240 190" aria-label="mini loop">
+            <circle cx="120" cy="95" r="70" fill="none" stroke="#2ec8ff" stroke-width="2"/>
+            <g fill="#2ec8ff">
+              <polygon points="-7,-6 7,0 -7,6" transform="translate(155 34.4) rotate(30)"/>
+              <polygon points="-7,-6 7,0 -7,6" transform="translate(190 95) rotate(90)"/>
+              <polygon points="-7,-6 7,0 -7,6" transform="translate(155 155.6) rotate(150)"/>
+              <polygon points="-7,-6 7,0 -7,6" transform="translate(85 155.6) rotate(210)"/>
+              <polygon points="-7,-6 7,0 -7,6" transform="translate(50 95) rotate(270)"/>
+              <polygon points="-7,-6 7,0 -7,6" transform="translate(85 34.4) rotate(330)"/>
+            </g>
+            <g fill="#39ff9c">
+              <circle cx="120" cy="25" r="8"/>
+              <circle cx="180.6" cy="60" r="8"/>
+              <circle cx="180.6" cy="130" r="8"/>
+              <circle cx="120" cy="165" r="8"/>
+              <circle cx="59.4" cy="130" r="8"/>
+              <circle cx="59.4" cy="60" r="8"/>
+            </g>
+          </svg>
+          <div class="loopcap mono">describe · sample · comment · re-render · save</div>
+          <div class="loopname mono">the loop</div>
+        </div>
+      </div>
+      <div class="pipe mono">
+        <span class="bx">text</span>→<span class="bx">script</span>→<span class="bx">audio</span>→<span class="bx">frames</span>→<span class="bx">MP4</span>
+      </div>
+      <div class="pipe-ok mono">
+        <svg width="22" height="20" viewBox="0 0 22 20"><path d="M3 11 L8 16 L19 3" fill="none" stroke="#39ff9c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>already exists (HyperFrames faceless-explainer)</span>
+      </div>
+      <p class="sent">The pipeline exists and presets are fixed; nobody ships describe, sample, comment, re-render, save.</p>
+      <p class="quote disp">That loop is the product.</p>
+    </div>
+    <p class="aside mono">*One existing preset file states, "Motion is out of scope." Ours has a whole section on it.</p>
+  </section>
+</div>
+
+</body>
+</html>
