@@ -6,6 +6,8 @@ import { createFakeAgent } from './fake/agent.ts';
 import { createFakeTts } from './fake/tts.ts';
 import { createFakeVideoRenderer } from './fake/renderer.ts';
 import { createPollyTts, pollyChecks } from './polly/tts.ts';
+import { createElevenLabsTts, elevenLabsChecks } from './elevenlabs/tts.ts';
+import { getSecret } from '../secrets.ts';
 
 export interface ProviderEnv { paths: Paths; settings: () => Settings }
 
@@ -14,6 +16,8 @@ type Factory<T> = {
   create: (env: ProviderEnv) => T;
   /** Prerequisite/connectivity checks, run by doctor when this provider is selected. */
   checks?: CheckDef[];
+  /** Secret names (e.g. 'apiKey') this provider reads from secrets.json; Settings shows a field for each. */
+  secrets?: string[];
 };
 
 /** Every implementation lives here. Adding a provider = adding an entry. */
@@ -24,6 +28,7 @@ export const AGENT_SURFACES: Record<string, Factory<AgentSurface>> = {
 export const TTS_PROVIDERS: Record<string, Factory<TtsProvider>> = {
   fake: { label: 'Fake TTS (tests)', create: () => createFakeTts() },
   polly: { label: 'Amazon Polly', create: (env) => createPollyTts(() => env.settings().polly), checks: pollyChecks },
+  elevenlabs: { label: 'ElevenLabs', create: (env) => createElevenLabsTts({ apiKey: () => getSecret(env.paths, 'elevenlabs', 'apiKey') }), checks: elevenLabsChecks(), secrets: ['apiKey'] },
 };
 
 export const RENDERERS: Record<string, Factory<Renderer> & { outputTypes: OutputType[] }> = {
