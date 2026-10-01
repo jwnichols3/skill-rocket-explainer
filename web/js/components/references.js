@@ -92,7 +92,7 @@ export function referencesPanel(style, { busy, onChange }) {
       r.kind === 'link'
         ? h('span', { style: { flex: 1, overflowWrap: 'anywhere' } }, h('a', { href: r.url, target: '_blank', rel: 'noopener noreferrer' }, r.url), r.note ? h('div.muted.small', r.note) : null)
         : h('span', { style: { flex: 1, overflowWrap: 'anywhere' } }, r.name),
-      r.kind === 'video' ? h('button.btn.small', { type: 'button', disabled: busy, onclick: run(() => analyzeReference(style.id, r.id)) }, r.analyzedAt ? 'Analyze again' : 'Analyze') : null,
+      r.kind === 'video' && r.fileUrl ? h('button.btn.small', { type: 'button', disabled: busy, onclick: run(() => analyzeReference(style.id, r.id)) }, r.analyzedAt ? 'Analyze again' : 'Analyze') : null,
       busy ? null : removeBtn(`Remove ${r.name}`, remove(r))),
     r.frameUrls?.length ? h('div.ref-frames', { style: { display: 'flex', gap: '4px', overflowX: 'auto', marginTop: '8px' } }, r.frameUrls.map((u, i) => thumb(u, `Frame at ${(r.frames[i].atMs / 1000).toFixed(1)} s`))) : null,
     r.instructions ? h('pre.small.ref-instructions', { style: { whiteSpace: 'pre-wrap', marginTop: '8px' } }, r.instructions) : null));

@@ -27,7 +27,7 @@ const EXT_KIND: Record<string, 'image' | 'video'> = Object.fromEntries([
 ]);
 
 /** The first bytes must match the declared image type, so junk can't be stored as a .png. */
-function looksLikeImage(head: Buffer, ext: string): boolean {
+export function looksLikeImage(head: Buffer, ext: string): boolean {
   if (ext === '.png') return head.subarray(0, 4).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47]));
   if (ext === '.jpg' || ext === '.jpeg') return head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff;
   if (ext === '.gif') return head.subarray(0, 4).toString('latin1') === 'GIF8';

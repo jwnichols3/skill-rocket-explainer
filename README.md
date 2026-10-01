@@ -14,7 +14,8 @@ See all four outputs, made from the same sources, in [`docs/dogfood/`](docs/dogf
   stored as a [DESIGN.md](https://github.com/google-labs-code/design.md)-style file with sections per output
   type. You make one by describing it (or pointing at something it should look like). The app then renders a
   ~10 second sample. You watch it, comment ("contrast too low", "voice too fast") and re-render until it's right,
-  then save. Clone a style to make a variant.
+  then save. Clone a style to make a variant. **Export** saves it as one `.style.json` file (instructions, voice,
+  model and reference images; not the samples) that **Import style** on another machine turns back into a style.
 - **One command to start.** Type `/explainer` in Claude Code. Name your sources and it creates the explainer
   for you; otherwise it opens the app's New page with whatever you gave it.
 - **Steer, then build.** The app reports what it found in your sources and proposes a plan for you to react to.

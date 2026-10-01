@@ -18,10 +18,25 @@ function swatches(palette) {
   return h('div.swatches', palette.slice(0, 7).map(([name, c]) => h('span.swatch', { title: `${name} ${c}`, style: { background: c } })));
 }
 
+/** Picks a .style.json from Export and opens the imported copy. */
+function importButton() {
+  const input = h('input', { type: 'file', accept: '.json,application/json', hidden: true, 'aria-label': 'Import style', onchange: async () => {
+    const [file] = input.files;
+    input.value = '';
+    if (!file) return;
+    const res = await fetch('/api/styles/import', { method: 'POST', headers: { 'x-explainer': '1', 'content-type': 'application/octet-stream' }, body: file });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { toast(data.error ?? 'Import failed', 'error'); return; }
+    toast(`Imported “${styleTitle(data)}”`);
+    navigate(`/styles/${data.id}`);
+  } });
+  return [input, h('button.btn', { type: 'button', title: 'Add a style from a .style.json file', onclick: () => input.click() }, 'Import style')];
+}
+
 async function stylesView(root) {
   const styles = await api('/api/styles');
   root.append(h('section.page',
-    h('header.page-head', h('h1', 'Styles'), h('div.actions', h('a.btn.primary', { href: '/styles/new', 'data-link': true }, 'New style'))),
+    h('header.page-head', h('h1', 'Styles'), h('div.actions', importButton(), h('a.btn.primary', { href: '/styles/new', 'data-link': true }, 'New style'))),
     styles.length === 0
       ? h('div.empty', h('p', 'No styles yet.'), h('p.muted', 'A style is a look you tune once and reuse for every explainer.'))
       : h('div.card-grid', styles.map((s) => h('a.card', { href: `/styles/${s.id}`, 'data-link': true },
@@ -234,6 +249,7 @@ async function styleView(root, { id }) {
           style.savedAt ? null : h('span.badge.warn', 'draft'),
           style.clonedFrom ? h('span.badge', 'clone') : null)),
         h('div.actions',
+          h('a.btn', { href: `/api/styles/${id}/export`, download: '', title: 'Download a .style.json to import elsewhere (samples are not included)' }, 'Export'),
           h('button.btn', { onclick: clone }, 'Clone'),
           h('button.btn.danger', { onclick: () => remove(style) }, 'Delete'))),
       h('div.grid-2',

@@ -10,7 +10,11 @@ import { OUTPUT_TYPES, type OutputType } from '../settings.ts';
 import { join } from 'node:path';
 import { readJson } from '../datadir.ts';
 import { styleNamesPrompt } from '../prompts/style.ts';
+import { exportStyle, exportFileName, importStyle } from '../style/portable.ts';
 import { referenceFromUpload, referenceFromPath, referenceLink, runReferenceVideo, suggestImprovements } from '../pipeline/style-helpers.ts';
+
+/** Room for a few reference images, base64-encoded. */
+const IMPORT_LIMIT = 200_000_000;
 
 export function parseVoice(app: App, v: any): VoiceChoice {
   const provider = typeof v?.provider === 'string' ? v.provider : app.settings().providers.tts;
@@ -92,6 +96,7 @@ export function styleRoutes(app: App, router: Router) {
     const ref = (await store.meta(params.id)).references?.find((r) => r.id === params.rid);
     if (!ref) throw new HttpError(404, 'no such reference');
     if (ref.kind !== 'video') throw new HttpError(400, 'only reference videos can be analyzed');
+    if (!ref.file) throw new HttpError(400, 'this reference came from an imported style without its video; add the video again to analyze it');
     return startJob(app, 'style-reference-video', `style:${params.id}`, (ctx) => runReferenceVideo(app, params.id, params.rid, ctx));
   });
 
@@ -162,6 +167,29 @@ export function styleRoutes(app: App, router: Router) {
     if (!name) throw new HttpError(400, 'a name is required to save');
     await store.update(params.id, (m) => { m.name = name; m.savedAt = new Date().toISOString(); });
     return store.get(params.id);
+  });
+
+  // One portable .style.json: instructions, settings and references; no samples.
+  router.get('/api/styles/:id/export', async ({ params, res }) => {
+    const doc = await exportStyle(app, params.id);
+    res.writeHead(200, {
+      'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store',
+      'content-disposition': `attachment; filename="${exportFileName(doc.style.name)}"`,
+    });
+    res.end(JSON.stringify(doc, null, 2) + '\n');
+  });
+
+  // The file's bytes as the body (application/octet-stream), or the same JSON with a JSON content type.
+  router.post('/api/styles/import', async ({ req, body }) => {
+    if (body !== undefined) return importStyle(app, JSON.stringify(body));
+    const chunks: Buffer[] = [];
+    let size = 0;
+    for await (const chunk of req) {
+      size += chunk.length;
+      if (size > IMPORT_LIMIT) throw new HttpError(413, `style files are limited to ${IMPORT_LIMIT / 1e6} MB`);
+      chunks.push(chunk);
+    }
+    return importStyle(app, Buffer.concat(chunks).toString('utf8'));
   });
 
   router.post('/api/styles/:id/clone', async ({ params, body }) => {
