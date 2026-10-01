@@ -46,3 +46,11 @@ import { createFakeDocumentRenderer } from '../../src/providers/fake/renderer.ts
 rendererContract('fake', () => createFakeDocumentRenderer(), { outputType: 'deck', expectExt: ['.html', '.pptx'] });
 rendererContract('fake', () => createFakeDocumentRenderer(), { outputType: 'doc', expectExt: ['.pdf', '.md'] });
 rendererContract('fake', () => createFakeDocumentRenderer(), { outputType: 'visual', expectExt: ['.png', '.html'] });
+
+// Deck: HTML slides + editable .pptx. The fake agent supplies slide HTML + models (no model needed; uses the
+// headless browser like browser.test.ts). LIVE=1 adds a 3-slide run with a real model via claude-subscription.
+import { createDeckRenderer } from '../../src/providers/deck/renderer.ts';
+import { createClaudeSurface, SUBSCRIPTION } from '../../src/providers/claude/agent.ts';
+rendererContract('html-deck', () => createDeckRenderer(), { outputType: 'deck', expectExt: ['.html', '.pptx'] });
+rendererContract('html-deck (claude-subscription)', () => createDeckRenderer(),
+  { outputType: 'deck', expectExt: ['.html', '.pptx'], agent: () => createClaudeSurface(SUBSCRIPTION), skip: liveSkip, timeout: 1_800_000 });

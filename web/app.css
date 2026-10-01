@@ -255,3 +255,7 @@ details[open] > summary { margin-bottom: 8px; }
 .type-tab { background: var(--sunken); border: 1px solid var(--border); color: var(--muted); border-radius: 999px; padding: 5px 14px; font: 500 13px var(--font); cursor: pointer; }
 .type-tab[aria-selected=true] { color: var(--text); border-color: var(--accent); background: var(--accent-soft); }
 .type-tab:disabled { opacity: .5; cursor: not-allowed; }
+
+/* deck viewer */
+.deck-nav { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.deck-index { flex: 1; text-align: center; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -15,6 +15,8 @@ import { HYPERFRAMES_CHECKS, hyperframesCacheRoot } from './hyperframes/checks.t
 import { createElevenLabsTts, elevenLabsChecks } from './elevenlabs/tts.ts';
 import { getSecret } from '../secrets.ts';
 import { createKokoroTts, kokoroChecks } from './kokoro/tts.ts';
+import { createDeckRenderer } from './deck/renderer.ts';
+import { BROWSER_CHECK } from '../browser.ts';
 
 export interface ProviderEnv { paths: Paths; settings: () => Settings }
 
@@ -51,6 +53,7 @@ export const RENDERERS: Record<string, Factory<Renderer> & { outputTypes: Output
     label: 'HyperFrames (HTML + GSAP, Apache-2.0)', outputTypes: ['video'], checks: HYPERFRAMES_CHECKS,
     create: (env) => createHyperFramesRenderer({ cacheRoot: hyperframesCacheRoot(env.paths.home) }),
   },
+  'html-deck': { label: 'HTML slides + editable PowerPoint', outputTypes: ['deck'], create: () => createDeckRenderer(), checks: [BROWSER_CHECK] },
 };
 
 export class Providers {
