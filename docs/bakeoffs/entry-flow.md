@@ -99,4 +99,4 @@ Two fixes that belong with whichever flow wins:
    B's style miss in this run.
 2. Have the CLI print the reverse-proxy URL when one is configured, instead of the loopback URL.
 
-The decision is recorded as a proposal in `docs/adr/0001-entry-flow.md` and waits for Rocket's pick.
+Rocket accepted the hybrid on 2026-10-01: `docs/adr/0001-entry-flow.md`.

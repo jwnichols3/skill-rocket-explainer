@@ -44,7 +44,7 @@ export const DEFAULT_SETTINGS: Settings = {
   providers: {
     agent: 'claude-subscription',
     tts: 'polly',
-    renderer: { video: 'remotion', deck: 'html-deck', doc: 'markdown-pdf', visual: 'html-visual' },
+    renderer: { video: 'hyperframes', deck: 'html-deck', doc: 'markdown-pdf', visual: 'html-visual' },
   },
   models: [
     { id: 'claude-opus-5-5', label: 'Opus 5.5' },

@@ -48,7 +48,9 @@ test('explainer setup (CLI): writes real-provider defaults, starts the app, acce
   assert.equal(s.setupComplete, true);
   assert.equal(s.port, port);
   assert.equal(s.providers.agent, 'claude-subscription');
-  assert.notEqual(s.providers.renderer.video, 'fake');
+  // ADR 0002: HyperFrames renders video by default, with Opus 5.5 at high effort.
+  assert.equal(s.providers.renderer.video, 'hyperframes');
+  assert.deepEqual(s.defaults, { model: 'claude-opus-5-5', effort: 'high' });
   assert.equal(await hostStatus(port, 'explainer.devbox.example'), 200);
 
   // Re-running keeps choices made since, and doesn't duplicate the seed style.

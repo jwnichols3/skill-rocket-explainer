@@ -97,5 +97,5 @@ installed and selectable.
 Caveats:
 - This is one render per cell, and the judge is a model.
 - Rocket should watch A-D before deciding.
-- The decision is proposed in `docs/adr/0002-default-video-renderer.md`. The default in settings will
-  switch when Rocket picks.
+- Rocket accepted this on 2026-10-01: `docs/adr/0002-default-video-renderer.md`. HyperFrames is now the
+  settings default.
