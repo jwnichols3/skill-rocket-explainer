@@ -1,6 +1,8 @@
 import { createFakeTts } from '../../src/providers/fake/tts.ts';
 import { createPollyTts } from '../../src/providers/polly/tts.ts';
 import { createElevenLabsTts } from '../../src/providers/elevenlabs/tts.ts';
+import { createKokoroTts } from '../../src/providers/kokoro/tts.ts';
+import { defaultHome, paths } from '../../src/datadir.ts';
 import { ttsContract } from '../contracts/tts.ts';
 import { liveSkip, LIVE_AWS_PROFILE, LIVE_ELEVENLABS_KEY, LIVE_ELEVENLABS_VOICE } from '../contracts/live.ts';
 
@@ -19,4 +21,12 @@ ttsContract('elevenlabs', () => (elevenlabs ??= createElevenLabsTts({ apiKey: as
   voiceIds: [LIVE_ELEVENLABS_VOICE],
   skip: liveSkip || (LIVE_ELEVENLABS_KEY ? false : 'live test: set ELEVENLABS_API_KEY to run'),
   timeout: 120_000,
+});
+
+// Kokoro runs locally: install it first (`node src/providers/kokoro/install.ts`, honours EXPLAINER_HOME).
+// One instance so the warm worker is shared across tests. US and UK voices use different G2P pipelines.
+let kokoro: ReturnType<typeof createKokoroTts> | undefined;
+ttsContract('kokoro', () => (kokoro ??= createKokoroTts(paths(defaultHome()))), {
+  voiceIds: ['af_heart', 'bm_george'],
+  skip: liveSkip,
 });

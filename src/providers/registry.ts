@@ -14,6 +14,7 @@ import { createHyperFramesRenderer } from './hyperframes/renderer.ts';
 import { HYPERFRAMES_CHECKS, hyperframesCacheRoot } from './hyperframes/checks.ts';
 import { createElevenLabsTts, elevenLabsChecks } from './elevenlabs/tts.ts';
 import { getSecret } from '../secrets.ts';
+import { createKokoroTts, kokoroChecks } from './kokoro/tts.ts';
 
 export interface ProviderEnv { paths: Paths; settings: () => Settings }
 
@@ -36,6 +37,7 @@ export const TTS_PROVIDERS: Record<string, Factory<TtsProvider>> = {
   fake: { label: 'Fake TTS (tests)', create: () => createFakeTts() },
   polly: { label: 'Amazon Polly', create: (env) => createPollyTts(() => env.settings().polly), checks: pollyChecks },
   elevenlabs: { label: 'ElevenLabs', create: (env) => createElevenLabsTts({ apiKey: () => getSecret(env.paths, 'elevenlabs', 'apiKey') }), checks: elevenLabsChecks(), secrets: ['apiKey'] },
+  kokoro: { label: 'Kokoro (local)', create: (env) => createKokoroTts(env.paths), checks: kokoroChecks },
 };
 
 export const RENDERERS: Record<string, Factory<Renderer> & { outputTypes: OutputType[] }> = {
