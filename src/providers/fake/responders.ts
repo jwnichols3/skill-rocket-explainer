@@ -187,3 +187,15 @@ ${bad ? '<img src="https://example.com/logo.png" alt="">' : ''}
 </html>
 ` } };
 };
+// Briefing doc (markdown-pdf renderer): the token-derived stylesheet, marked so tests can tell it came from the agent.
+import { fallbackStylesheet } from '../doc/stylesheet.ts';
+
+responders['doc-stylesheet'] = (inputs) => ({ __files: { 'doc.css': `/* fake doc-stylesheet */\n${fallbackStylesheet(String(inputs.style ?? ''))}` } });
+
+/** Each section's visuals become a callout; visuals that mention a table or comparison also get a small table. */
+responders['doc-figures'] = (inputs) => ({
+  sections: (inputs.sections ?? []).map((s: any) => ({
+    id: s.id,
+    markdown: [`> **Key point:** ${s.visuals}`, /table|compar|side-by-side/i.test(s.visuals) ? '| Option | Strength |\n| --- | --- |\n| Queue | Buffers work |\n| Stream | Replays history |' : ''].filter(Boolean).join('\n\n'),
+  })),
+});
