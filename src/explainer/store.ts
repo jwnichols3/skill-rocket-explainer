@@ -39,6 +39,38 @@ export interface Comment { id: string; text: string; createdAt: string; atMs?: n
 
 export interface PlanVersion { n: number; plan: Plan; comments: Comment[]; createdAt: string; model: string; effort: string }
 
+/** A scene of the final script: narration (or body text) and visual direction. */
+export interface ScriptScene { id: string; title: string; narration: string; visuals: string; purpose?: string }
+
+/** A scene as built: the script plus its slot in the time map. */
+export interface BuiltScene extends ScriptScene { startMs: number; durationMs: number }
+
+export interface OutputRound {
+  n: number;
+  createdAt: string;
+  model: string;
+  effort: string;
+  /** Style round whose instructions were used. */
+  styleRound: number | null;
+  voice?: { provider: string; voiceId: string };
+  scenes: BuiltScene[];
+  comments: Comment[];
+  /** Output files, relative to the round dir; primary first. */
+  files: string[];
+  durationMs?: number;
+  /** Scene ids re-rendered / re-narrated in this round. */
+  rendered: string[];
+  narrated: string[];
+  basedOn: number | null;
+}
+
+export interface OutputState {
+  /** The editable script (narration and visuals per scene). */
+  script: ScriptScene[];
+  rounds: OutputRound[];
+  current: number | null;
+}
+
 export type ExplainerStatus = 'draft' | 'reported' | 'planned' | 'approved' | 'built';
 
 export interface Explainer {
@@ -57,6 +89,7 @@ export interface Explainer {
   report: SourceReport | null;
   plans: PlanVersion[];
   approvedPlan: number | null;
+  outputs: Partial<Record<OutputType, OutputState>>;
   createdAt: string;
   updatedAt: string;
 }
@@ -88,9 +121,9 @@ export class ExplainerStore {
     return out.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }
 
-  async create(input: Omit<Explainer, 'id' | 'status' | 'report' | 'plans' | 'approvedPlan' | 'createdAt' | 'updatedAt' | 'corrections'>): Promise<Explainer> {
+  async create(input: Omit<Explainer, 'id' | 'status' | 'report' | 'plans' | 'approvedPlan' | 'createdAt' | 'updatedAt' | 'corrections' | 'outputs'>): Promise<Explainer> {
     const now = new Date().toISOString();
-    const e: Explainer = { ...input, id: newId('ex_'), corrections: [], status: 'draft', report: null, plans: [], approvedPlan: null, createdAt: now, updatedAt: now };
+    const e: Explainer = { ...input, id: newId('ex_'), corrections: [], status: 'draft', report: null, plans: [], approvedPlan: null, outputs: {}, createdAt: now, updatedAt: now };
     await mkdir(this.dir(e.id), { recursive: true });
     await writeJson(join(this.dir(e.id), 'explainer.json'), e);
     return e;
@@ -104,6 +137,10 @@ export class ExplainerStore {
       await writeJson(join(this.dir(id), 'explainer.json'), e);
       return e;
     });
+  }
+
+  roundDir(id: string, type: OutputType, n: number) {
+    return join(this.dir(id), 'outputs', type, 'rounds', String(n));
   }
 
   async delete(id: string): Promise<void> {

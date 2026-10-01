@@ -109,6 +109,8 @@ export interface RenderRequest {
   agent?: { surface: AgentSurface; model: string; effort: string };
   comments?: string[];
   onLog?: (line: string) => void;
+  /** Called as each scene starts rendering, for build progress. */
+  onScene?: (sceneId: string, index: number, total: number) => void;
   signal?: AbortSignal;
 }
 

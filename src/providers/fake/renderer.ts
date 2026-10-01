@@ -28,6 +28,7 @@ export function createFakeVideoRenderer(): Renderer {
         if (!dirty && cached && await exists(cached)) {
           if (cached !== clip) await copyFile(cached, clip);
         } else {
+          req.onScene?.(scene.id, clips.length, req.scenes.length);
           const secs = (scene.durationMs / 1000).toFixed(3);
           const audio = scene.audioFile ? ['-i', scene.audioFile] : ['-f', 'lavfi', '-t', secs, '-i', 'anullsrc=r=16000:cl=mono'];
           await ffmpeg(['-f', 'lavfi', '-i', `color=c=${colorFor(scene.id)}:s=320x180:r=10:d=${secs}`, ...audio,

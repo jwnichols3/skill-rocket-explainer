@@ -53,7 +53,7 @@ async function explainerView(root, { id }) {
       h('div.steps', STEPS.map((s, i) => h('span.step', { 'data-n': i + 1, class: i < at ? 'done' : i === at ? 'current' : '' }, s))),
       jobBox,
       h('div.grid-2',
-        h('div.stack', reportPanel(ctx), planPanel(ctx), ...workspaceExtensions.map((fn) => fn(ctx))),
+        h('div.stack', ...workspaceExtensions.map((fn) => fn(ctx)), planPanel(ctx), reportPanel(ctx)),
         h('div.stack', sourcesPanel(ctx), choicesPanel(ctx))));
   }
 

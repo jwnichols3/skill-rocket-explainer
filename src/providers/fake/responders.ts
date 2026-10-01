@@ -60,3 +60,14 @@ responders['explainer-plan'] = (inputs) => {
     keyVisuals: ['Side-by-side comparison', ...comments.map((c) => `Per comment: ${c}`)],
   };
 };
+
+responders['explainer-script'] = (inputs) => ({
+  scenes: (inputs.plan?.scenes ?? []).map((s: any) => ({ id: s.id, title: s.title, narration: s.narration || `${s.title}.`, visuals: s.visuals })),
+});
+
+responders['explainer-revise'] = (inputs) => ({
+  scenes: (inputs.script ?? []).filter((s: any) => (inputs.dirty ?? []).includes(s.id)).map((s: any) => {
+    const notes = (inputs.comments ?? []).filter((c: any) => c.sceneId === s.id || c.sceneId === null).map((c: any) => c.text);
+    return { ...s, visuals: `${s.visuals} [revised: ${notes.join('; ')}]` };
+  }),
+});

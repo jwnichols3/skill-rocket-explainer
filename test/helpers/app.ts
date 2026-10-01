@@ -54,3 +54,15 @@ export async function waitForJob(app: TestApp, jobId: string, timeoutMs = 30_000
 
 export const post = (body: unknown): RequestInit => ({ method: 'POST', body: JSON.stringify(body) });
 export const put = (body: unknown): RequestInit => ({ method: 'PUT', body: JSON.stringify(body) });
+
+/** A style plus an explainer with an approved plan, ready to build. */
+export async function approvedExplainer(app: TestApp, outputType = 'video'): Promise<{ id: string; styleId: string }> {
+  const style = await app.json('/api/styles', post({ name: 'Neon', description: 'neon blue/green', voice: { provider: 'fake', voiceId: 'fake-bright', controls: {} } }));
+  const e = await app.json('/api/explainers', post({ brief: 'queues vs streams', sources: [{ kind: 'note', value: 'Queues buffer work; streams replay it.' }], styleId: style.id, outputType }));
+  for (const step of ['report', 'plan']) {
+    const job = await waitForJob(app, (await app.json(`/api/explainers/${e.id}/${step}`, post({}))).id);
+    if (job.status !== 'succeeded') throw new Error(`${step} failed: ${job.error}`);
+  }
+  await app.json(`/api/explainers/${e.id}/approve`, post({}));
+  return { id: e.id, styleId: style.id };
+}

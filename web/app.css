@@ -239,3 +239,9 @@ details[open] > summary { margin-bottom: 8px; }
 .type-card input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
 .md { white-space: pre-wrap; font-size: 14px; color: #cfd5e3; background: var(--sunken); border-radius: var(--radius-sm); padding: 10px 12px; }
 .plan-outline { margin: 8px 0 12px; padding-left: 20px; }
+.scene-strip { display: flex; gap: 4px; margin-top: 8px; overflow-x: auto; }
+.scene-chip { flex: 1 1 0; min-width: 0; text-align: left; background: var(--sunken); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 6px 8px; font: 12px var(--font); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.scene-chip:hover { border-color: var(--accent); }
+.script-scene { border-top: 1px solid var(--border); padding-top: 10px; }
+.script-scene label { margin-top: 8px; }
+.rendered { color: var(--accent); margin: 8px 0 0; }

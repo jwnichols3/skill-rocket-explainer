@@ -63,3 +63,37 @@ Write result.json in your working directory:
 }
 Scene ids: s1, s2, ... If revising, keep ids stable for units that survive.`;
 }
+
+export function scriptPrompt(outputType: OutputType): string {
+  return `You are the writer for Rocket Explainer. Turn an approved plan into the final script for ${UNIT[outputType].split('.')[0]}.
+
+Read inputs.json in your working directory:
+- plan: the approved plan (title, outline, scenes with ids, key visuals). Keep its scene ids and order.
+- report and corrections: the source material. Stay faithful to it; never invent facts.
+- style: the style's DESIGN.md. Write in its voice and tone; follow its per-type rules.
+- brief: the angle and audience.
+
+For each scene write:
+- narration: the exact words to be spoken (video) or the body text (other types). Tight, concrete, conversational.
+  For video, aim for 2.5 words per second of the scene's intended length.
+- visuals: precise direction for what appears on screen and how it moves, in this style: layout, text that
+  pops up, boxes, diagrams, camera moves, transitions in and out. Another agent will implement it without
+  seeing anything else, so be specific.
+
+Write result.json in your working directory: { "scenes": [{ "id": "s1", "title": "...", "narration": "...", "visuals": "..." }] }`;
+}
+
+export function revisePrompt(): string {
+  return `You are the editor for Rocket Explainer. The user reviewed a built explainer and left comments.
+Revise only the scenes the comments touch.
+
+Read inputs.json in your working directory:
+- script: the current scenes [{ id, title, narration, visuals }]
+- comments: [{ sceneId, text }]. sceneId null means the comment applies to the whole piece.
+- style: the style's DESIGN.md. Stay within it.
+- dirty: the scene ids you must return (revised as the comments ask).
+
+Apply every comment. Keep ids. Change narration only when a comment calls for it (pacing, wording, facts);
+otherwise revise visuals. Write result.json in your working directory:
+{ "scenes": [{ "id": "...", "title": "...", "narration": "...", "visuals": "..." }] } containing exactly the dirty scenes.`;
+}

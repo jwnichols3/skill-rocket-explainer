@@ -9,7 +9,7 @@ import { JobRunner } from './jobs.ts';
 import { StyleStore } from './style/store.ts';
 import { coreRoutes } from './routes/core.ts';
 import { styleRoutes } from './routes/styles.ts';
-import { explainerRoutes } from './routes/explainers.ts';
+import { explainerRoutes, outputRoutes } from './routes/explainers.ts';
 import { ExplainerStore } from './explainer/store.ts';
 import './providers/fake/responders.ts';
 
@@ -48,6 +48,7 @@ export async function createApp(paths: Paths, router: Router): Promise<App> {
   coreRoutes(app, router);
   styleRoutes(app, router);
   explainerRoutes(app, router);
+  outputRoutes(app, router);
 
   router.get('/api/status', () => ({
     app: 'rocket-explainer',
