@@ -28,3 +28,35 @@ responders['style-names'] = (inputs) => {
 
 responders['probe'] = (inputs) => ({ answer: Number(inputs.a) + Number(inputs.b) });
 responders['probe-escape'] = () => ({ tried: true });
+
+responders['source-report'] = async (inputs) => {
+  const { access } = await import('node:fs/promises');
+  const sources = [];
+  for (const s of inputs.sources ?? []) {
+    let found = true;
+    if (s.kind === 'path') found = await access(s.value).then(() => true, () => false);
+    if (s.kind === 'url') found = !/missing|404/.test(s.value);
+    sources.push(found
+      ? { sourceId: s.id, found, summary: `Fake summary of ${s.value}.`, extract: `- Key point from ${s.value}` }
+      : { sourceId: s.id, found, summary: '', extract: '', notes: 'Could not be reached.' });
+  }
+  const corrections = (inputs.corrections ?? []).map((c: string) => `Correction applied: ${c}.`).join(' ');
+  return { suggestedTitle: 'Fake explainer', overall: `Covers ${sources.filter((s) => s.found).length} source(s) for "${inputs.brief}". ${corrections}`.trim(), sources, gaps: ['No cost numbers.'] };
+};
+
+responders['explainer-plan'] = (inputs) => {
+  const comments: string[] = inputs.comments ?? [];
+  const unit = inputs.outputType === 'deck' ? 'Slide' : inputs.outputType === 'doc' ? 'Section' : inputs.outputType === 'visual' ? 'Panel' : 'Scene';
+  return {
+    title: 'Fake explainer',
+    summary: `A short ${inputs.outputType} about ${inputs.brief}.${comments.length ? ` Revised: ${comments.join('; ')}.` : ''}`,
+    length: inputs.outputType === 'video' ? '~12 s' : '3 units',
+    outline: ['Set up the question', 'Compare the options', 'Land the recommendation'],
+    scenes: [
+      { id: 's1', title: `${unit} one`, purpose: 'Hook', narration: 'Two options, one decision.', visuals: 'Title card' },
+      { id: 's2', title: `${unit} two`, purpose: 'Compare', narration: 'Queues buffer work; streams replay it.', visuals: 'Side-by-side boxes' },
+      { id: 's3', title: `${unit} three`, purpose: 'Land it', narration: 'Pick the one that fits your load.', visuals: 'Highlighted winner' },
+    ],
+    keyVisuals: ['Side-by-side comparison', ...comments.map((c) => `Per comment: ${c}`)],
+  };
+};

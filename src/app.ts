@@ -9,6 +9,8 @@ import { JobRunner } from './jobs.ts';
 import { StyleStore } from './style/store.ts';
 import { coreRoutes } from './routes/core.ts';
 import { styleRoutes } from './routes/styles.ts';
+import { explainerRoutes } from './routes/explainers.ts';
+import { ExplainerStore } from './explainer/store.ts';
 import './providers/fake/responders.ts';
 
 export interface App {
@@ -17,6 +19,7 @@ export interface App {
   providers: Providers;
   jobs: JobRunner;
   styles: StyleStore;
+  explainers: ExplainerStore;
   log(level: 'info' | 'warn' | 'error', msg: string): void;
   onSettingsChanged(fn: (s: Settings) => void): void;
   shutdown(): Promise<void>;
@@ -37,12 +40,14 @@ export async function createApp(paths: Paths, router: Router): Promise<App> {
     providers,
     jobs,
     styles: new StyleStore(paths),
+    explainers: new ExplainerStore(paths),
     log,
     onSettingsChanged(fn) { listeners.push(fn); },
     async shutdown() { await jobs.shutdown(); },
   };
   coreRoutes(app, router);
   styleRoutes(app, router);
+  explainerRoutes(app, router);
 
   router.get('/api/status', () => ({
     app: 'rocket-explainer',
