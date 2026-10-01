@@ -1,6 +1,7 @@
 import { h, toast } from '../dom.js';
 import { api } from '../api.js';
 import { getSettings } from '../components/pickers.js';
+import { jobView } from '../components/job.js';
 
 export async function settingsView(root) {
   const [{ settings, available }, secrets] = await Promise.all([api('/api/settings'), api('/api/secrets')]);
@@ -30,7 +31,7 @@ export async function settingsView(root) {
         TYPES.map(([type, label]) => rendererPicker(type, label)))),
     voiceProviders(settings, available.tts, secrets, (id) => { ttsDd.textContent = id; })));
   const surfaces = agentSurfacesPanel(settings, available);
-  root.lastElementChild.append(surfaces.el, modelsPanel(settings, (models) => surfaces.setModels(models)));
+  root.lastElementChild.append(surfaces.el, modelsPanel(settings, (models) => surfaces.setModels(models)), versionPanel());
 }
 
 const SECRET_LABELS = { apiKey: 'API key' };
@@ -213,4 +214,58 @@ function modelsPanel(settings, onSaved) {
       h('div.field', { style: { flex: 2 } }, h('label', { for: 'default-model' }, 'Default model'), defModel),
       h('div.field', { style: { flex: 1 } }, h('label', { for: 'default-effort' }, 'Default effort'), defEffort)),
     h('div.row', save));
+}
+
+/** Installed version, "Check for update" against the latest GitHub release, install and restart. */
+function versionPanel() {
+  const installed = h('dd', { id: 'installed-version' }, '…');
+  api('/api/status').then((s) => { installed.textContent = `v${s.version}`; }, () => {});
+  const result = h('div.update-result', { 'aria-live': 'polite', style: { marginTop: '10px' } });
+
+  const restart = (version) => h('button.btn.small.primary', { type: 'button', async onclick(e) {
+    e.target.disabled = true;
+    try {
+      await api('/api/update/restart', { method: 'POST', body: {} });
+      result.append(h('div.hint', 'Restarting…'));
+      const deadline = Date.now() + 60_000;
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 1000));
+        const s = await api('/api/status').catch(() => null);
+        if (s?.version === version) { location.reload(); return; }
+      }
+      toast('The app did not come back; run `explainer restart`', 'error');
+    } catch (err) { toast(err.message, 'error'); e.target.disabled = false; }
+  } }, 'Restart now');
+
+  const install = (u) => h('button.btn.small.primary', { type: 'button', async onclick(e) {
+    e.target.disabled = true;
+    try {
+      const job = await api('/api/update/install', { method: 'POST', body: { tag: u.tag } });
+      result.append(jobView(job.id, { onEnd(j) {
+        if (j.status !== 'succeeded') { e.target.disabled = false; return; }
+        result.append(h('div.callout.info', `v${j.result.installed} is installed. Restart the app to use it.`,
+          h('div.row', { style: { marginTop: '8px' } }, restart(j.result.installed), h('span.hint', 'or run ', h('code', 'explainer restart')))));
+      } }).el);
+    } catch (err) { toast(err.message, 'error'); e.target.disabled = false; }
+  } }, `Install v${u.latest}`);
+
+  const check = h('button.btn.small', { type: 'button', async onclick() {
+    check.disabled = true;
+    result.replaceChildren(h('div.hint', 'Checking GitHub…'));
+    try {
+      const u = await api('/api/update');
+      if (u.problem) result.replaceChildren(h('div.callout.warn', u.problem));
+      else if (!u.newer) result.replaceChildren(h('div', `You're up to date: the latest release is v${u.latest}.`));
+      else result.replaceChildren(h('div', `v${u.latest} is available. `, u.url ? h('a', { href: u.url, target: '_blank', rel: 'noopener' }, 'Release notes') : null),
+        h('div.row', { style: { marginTop: '8px' } }, install(u)));
+    } catch (err) {
+      result.replaceChildren(h('div.callout.error', err.message));
+    } finally { check.disabled = false; }
+  } }, 'Check for update');
+
+  return h('div.panel.version',
+    h('h2', 'Version'),
+    h('dl.kv', h('dt', 'Installed'), installed),
+    h('div.row', { style: { marginTop: '10px' } }, check),
+    result);
 }

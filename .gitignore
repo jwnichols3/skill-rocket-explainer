@@ -3,3 +3,5 @@ test-results/
 playwright-report/
 .tmp/
 .claude/worktrees/
+dist/
+.public-readiness-denylist

@@ -17,7 +17,9 @@
     "test:api": "node --test --test-concurrency=4 'test/api/**/*.test.ts'",
     "test:e2e": "playwright test",
     "test": "npm run typecheck && npm run test:api && npm run test:e2e",
-    "test:live": "LIVE=1 node --test --test-concurrency=1 'test/api/**/*.test.ts'"
+    "test:live": "LIVE=1 node --test --test-concurrency=1 'test/api/**/*.test.ts'",
+    "public-readiness": "node scripts/public-readiness.ts",
+    "package": "scripts/package.sh"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

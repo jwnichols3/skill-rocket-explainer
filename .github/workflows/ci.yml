@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: npm ci
+      - name: Public-readiness check
+        run: npm run public-readiness
+      - run: npm run typecheck
+      # API tests render through headless Chromium too, so install it first.
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:api
+      - run: npx playwright test
