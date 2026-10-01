@@ -18,6 +18,8 @@ export interface Settings {
   models: { id: string; label: string }[];
   efforts: string[];
   defaults: { model: string; effort: string };
+  /** Amazon Polly. Empty profile = the default AWS credential chain. */
+  polly: { region: string; profile?: string };
   /** Test-only knobs for the fake providers. */
   fake?: { failKinds?: string[]; delayMs?: number };
 }
@@ -37,6 +39,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ],
   efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
   defaults: { model: 'claude-opus-5-5', effort: 'high' },
+  polly: { region: 'us-east-1' },
 };
 
 function isObject(v: unknown): v is Record<string, any> {
