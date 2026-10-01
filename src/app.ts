@@ -8,6 +8,7 @@ import { VERSION } from './version.ts';
 import { JobRunner } from './jobs.ts';
 import { StyleStore } from './style/store.ts';
 import { coreRoutes } from './routes/core.ts';
+import { secretRoutes } from './routes/secrets.ts';
 import { styleRoutes } from './routes/styles.ts';
 import { explainerRoutes, outputRoutes } from './routes/explainers.ts';
 import { ExplainerStore } from './explainer/store.ts';
@@ -46,6 +47,7 @@ export async function createApp(paths: Paths, router: Router): Promise<App> {
     async shutdown() { await jobs.shutdown(); },
   };
   coreRoutes(app, router);
+  secretRoutes(app, router);
   styleRoutes(app, router);
   explainerRoutes(app, router);
   outputRoutes(app, router);
@@ -61,13 +63,14 @@ export async function createApp(paths: Paths, router: Router): Promise<App> {
     settings,
     available: {
       agent: Object.entries(AGENT_SURFACES).map(([id, f]) => ({ id, label: f.label })),
-      tts: Object.entries(TTS_PROVIDERS).map(([id, f]) => ({ id, label: f.label })),
+      tts: Object.entries(TTS_PROVIDERS).map(([id, f]) => ({ id, label: f.label, secrets: f.secrets ?? [] })),
       renderer: Object.entries(RENDERERS).map(([id, f]) => ({ id, label: f.label, outputTypes: f.outputTypes })),
     },
   }));
 
   router.put('/api/settings', async ({ body }) => {
     if (!body || typeof body !== 'object') throw new HttpError(400, 'expected a settings object');
+    if (/"apiKey"\s*:/i.test(JSON.stringify(body))) throw new HttpError(400, 'API keys are not settings: use PUT /api/secrets/:provider');
     const bad = validateProviders(body.providers);
     if (bad) throw new HttpError(400, bad);
     settings = await saveSettings(paths, body);
