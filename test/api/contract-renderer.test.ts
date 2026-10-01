@@ -33,3 +33,11 @@ test('[remotion] a scene whose code fails to compile is retried once with the er
   const expected = scenes.reduce((s, x) => s + x.durationMs, 0);
   assert.ok(Math.abs(await probeDurationMs(r.primary) - expected) <= 500);
 });
+// HyperFrames: live (real toolchain, Chrome, ffmpeg), opt-in with LIVE=1. The fake agent supplies scene
+// code, so no model is needed. The toolchain cache defaults to a temp dir reused across runs.
+import { createHyperFramesRenderer } from '../../src/providers/hyperframes/renderer.ts';
+import { hyperframesCacheRoot } from '../../src/providers/hyperframes/checks.ts';
+
+const hyperframesHome = process.env.EXPLAINER_HOME ?? join(tmpdir(), 'rocket-explainer-live');
+rendererContract('hyperframes', () => createHyperFramesRenderer({ cacheRoot: hyperframesCacheRoot(hyperframesHome) }),
+  { outputType: 'video', expectExt: ['.mp4'], skip: liveSkip, timeout: 1_800_000 });
