@@ -56,3 +56,22 @@ test('a reverse-proxy hostname added in settings is allowed in Host and Origin',
   await app.json('/api/settings', { method: 'PUT', body: JSON.stringify({ publicHostnames: ['explainer.devbox.example'] }) });
   assert.equal(await raw('GET', '/api/status', { host: 'explainer.devbox.example', origin: 'https://explainer.devbox.example' }), 200);
 });
+
+test('media paths cannot escape the styles/explainers areas', async () => {
+  const { writeFile } = await import('node:fs/promises');
+  await writeFile(`${app.home}/secrets.json`, '{"key":"CANARY-SECRET"}');
+  const u = new URL(app.url);
+  const get = (path: string) => new Promise<{ status: number; body: string }>((resolve, reject) => {
+    const req = request({ host: u.hostname, port: u.port, path, headers: { host: u.host } }, (res) => {
+      let body = '';
+      res.on('data', (d) => (body += d));
+      res.on('end', () => resolve({ status: res.statusCode!, body }));
+    });
+    req.on('error', reject);
+    req.end();
+  });
+  for (const path of ['/media/styles/%2e%2e/secrets.json', '/media/styles/..%2Fsecrets.json', '/media/styles/%2E%2E%2Fsecrets.json', '/media/explainers/../secrets.json', '/media/secrets.json']) {
+    const r = await get(path);
+    assert.ok(!r.body.includes('CANARY-SECRET'), `${path} leaked secrets (status ${r.status})`);
+  }
+});

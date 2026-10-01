@@ -17,8 +17,10 @@ export function coreRoutes(app: App, router: Router) {
 
   // Media from the data dir: styles and explainers only (never settings or secrets).
   router.get('/media/*', async ({ req, res, params, url }) => {
-    const rel = params.rest;
-    if (!/^(styles|explainers)\//.test(rel)) throw new HttpError(403, 'not a media path');
-    await sendFile(req, res, app.paths.home, rel, url.searchParams.get('download') ?? undefined);
+    const [area, ...rest] = params.rest.split('/');
+    const root = area === 'styles' ? app.paths.styles : area === 'explainers' ? app.paths.explainers : null;
+    if (!root) throw new HttpError(403, 'not a media path');
+    // sendFile confines the resolved path to the area root, so ../ can't reach settings or secrets.
+    await sendFile(req, res, root, rest.join('/'), url.searchParams.get('download') ?? undefined);
   });
 }
