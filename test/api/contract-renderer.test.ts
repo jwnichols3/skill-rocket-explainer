@@ -46,3 +46,7 @@ import { createFakeDocumentRenderer } from '../../src/providers/fake/renderer.ts
 rendererContract('fake', () => createFakeDocumentRenderer(), { outputType: 'deck', expectExt: ['.html', '.pptx'] });
 rendererContract('fake', () => createFakeDocumentRenderer(), { outputType: 'doc', expectExt: ['.pdf', '.md'] });
 rendererContract('fake', () => createFakeDocumentRenderer(), { outputType: 'visual', expectExt: ['.png', '.html'] });
+
+// Briefing doc: real Markdown -> HTML -> PDF (headless Chromium); the fake agent supplies doc.css and figures.
+import { createDocRenderer } from '../../src/providers/doc/renderer.ts';
+rendererContract('markdown-pdf', () => createDocRenderer(), { outputType: 'doc', expectExt: ['.pdf', '.md'] });

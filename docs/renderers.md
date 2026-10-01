@@ -105,3 +105,34 @@ The pinned version is `HYPERFRAMES_VERSION` in `toolchain.ts`. Bumping it instal
 ### Tests
 
 `LIVE=1 node --test test/api/contract-renderer.test.ts` runs the shared contract against the real toolchain, with the fake agent supplying a minimal composition per scene (no model needed). Its toolchain cache defaults to `<tmpdir>/rocket-explainer-live`, or `EXPLAINER_HOME` when set.
+
+## Briefing doc
+
+Renderer `markdown-pdf` (output type `doc`): a narrative briefing doc as Markdown, rendered to a styled PDF. Select it with `providers.renderer.doc = "markdown-pdf"`.
+
+**Code:** `src/providers/doc/` (`renderer.ts`, `markdown.ts`, `stylesheet.ts`, `prompt.ts`). **Viewer:** `web/js/viewers/doc.js`.
+
+**Needs:** a headless Chromium (`npx playwright install chromium`, or Google Chrome); `explainer doctor` checks it when this renderer is selected. Markdown is parsed with [marked](https://github.com/markedjs/marked) (MIT, no dependencies, GFM tables built in).
+
+### Output
+
+- `doc.pdf` (primary) and `doc.md`. Explainer rounds store them as `doc.pdf` + `doc.md`, style samples as `sample.pdf` + `sample.md`; export copies both.
+- `doc.md` is assembled deterministically from the script: `# <title>`, then one `## ` section per scene, in order, with the body text (the scene's narration) and then its figures. Each heading carries an inline anchor, `## <a id="s2"></a>Packets`: valid CommonMark, invisible on GitHub, and the stable section target. `#`/`##` headings inside body text are demoted to `###`; raw HTML in body text is shown as text.
+- The work dir also keeps `doc.html` (what was printed), `doc.css` + `doc.css.json` (stylesheet and its style hash/source) and `figures.json` (per-section figures and content hashes), which later rounds reuse through `cacheDir`.
+
+### How a render works
+
+1. **Stylesheet** (agent task `doc-stylesheet`, file tools only, `expectFiles: ['doc.css']`). Inputs: `style` (full DESIGN.md), `docRules` (its `## Doc` section), `previousError` on a retry; the work dir also has `structure.html`, the real doc in the fixed HTML structure (`body.doc`, `header.doc-cover > h1.doc-title`, `nav.doc-toc`, `main.doc-body > section.doc-section[data-scene] > h2 ...`, blockquote callouts, GFM tables). The agent writes `@page` size/margins, margin-box headers/footers (`"__DOC_TITLE__"` is replaced with the title), type scale, headings, callouts, tables and colours from the tokens. Rejected if empty, over 200 KB, without `@page`, or loading anything remote. Cached by a hash of the style text: reused from the previous round's `cacheDir`, or from `<data dir>/cache/doc-stylesheets/<hash>.css` across explainers. A failure is retried once with the error; after a second failure (or with no agent) a deterministic stylesheet derived from the tokens is used (paper = the lighter of `background`/`text`, ink = the darker, `primary`/`accent` on rules, callouts and table heads) and the next render tries the agent again.
+2. **Figures** (agent task `doc-figures`, file tools only, `resultFile: 'result.json'`, run in parallel with the stylesheet). The script's `visuals` for a doc are directions ("a small table comparing ..."), so one task turns them into Markdown for the sections that need it: blockquote callouts, small GFM tables and short lists, from the section's own facts. Output `{ "sections": [{ "id", "markdown" }] }`. Figures are cached per section by a hash of title/narration/visuals and regenerated for dirty sections only. Fallback after two failures: the visuals text as a `> **Figure:** ...` callout.
+3. Markdown -> HTML (marked) with a table of contents linking every section; that makes Chromium emit a named PDF destination per section ID.
+4. HTML -> PDF with `src/browser.ts` `htmlToPdf` (print media, `@page` size wins, remote requests blocked).
+
+Section text is final in the script, so the whole doc is regenerated each time (a couple of seconds); `rendered` reports `dirtyScenes`, or every section on a full build. Section-pinned comments revise that section's script (generic pipeline), which re-runs only that section's figures.
+
+### Viewer
+
+The PDF in an iframe, with a PDF / Markdown toggle (the Markdown view shows `doc.md` as text). Section chips seek: the PDF reopens at `#nameddest=<sceneId>` (Chrome's built-in PDF viewer), the Markdown view scrolls to and highlights the section's `## ` line. Links to every file of the round.
+
+### Tests
+
+`test/api/contract-renderer.test.ts` runs the shared contract for `markdown-pdf` (real Chromium, fake agent supplying `doc.css` and figures). `test/api/doc-renderer.test.ts` covers section order and anchors, the style's colours in the printed HTML/CSS, named destinations, pagination of a long doc, retry and fallback, stylesheet and figure caching, sanitising, and an explainer build/re-render plus a style doc sample through the app. `test/e2e/doc-viewer.spec.ts` covers the toggle and seeking.

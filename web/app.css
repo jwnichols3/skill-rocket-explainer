@@ -255,3 +255,9 @@ details[open] > summary { margin-bottom: 8px; }
 .type-tab { background: var(--sunken); border: 1px solid var(--border); color: var(--muted); border-radius: 999px; padding: 5px 14px; font: 500 13px var(--font); cursor: pointer; }
 .type-tab[aria-selected=true] { color: var(--text); border-color: var(--accent); background: var(--accent-soft); }
 .type-tab:disabled { opacity: .5; cursor: not-allowed; }
+
+/* doc viewer */
+.doc-tabs { margin-bottom: 8px; }
+.doc-md { position: relative; max-height: 80vh; overflow: auto; margin: 0; padding: 14px 16px; white-space: pre-wrap; font: 13px/1.6 var(--mono); color: var(--text); background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius); }
+.doc-md-heading { color: var(--accent); font-weight: 600; }
+.doc-md-heading.is-target { background: var(--accent-soft); outline: 1px solid var(--accent); border-radius: 4px; }

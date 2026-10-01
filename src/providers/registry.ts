@@ -15,6 +15,7 @@ import { HYPERFRAMES_CHECKS, hyperframesCacheRoot } from './hyperframes/checks.t
 import { createElevenLabsTts, elevenLabsChecks } from './elevenlabs/tts.ts';
 import { getSecret } from '../secrets.ts';
 import { createKokoroTts, kokoroChecks } from './kokoro/tts.ts';
+import { createDocRenderer, docCacheRoot, DOC_CHECKS } from './doc/renderer.ts';
 
 export interface ProviderEnv { paths: Paths; settings: () => Settings }
 
@@ -51,6 +52,7 @@ export const RENDERERS: Record<string, Factory<Renderer> & { outputTypes: Output
     label: 'HyperFrames (HTML + GSAP, Apache-2.0)', outputTypes: ['video'], checks: HYPERFRAMES_CHECKS,
     create: (env) => createHyperFramesRenderer({ cacheRoot: hyperframesCacheRoot(env.paths.home) }),
   },
+  'markdown-pdf': { label: 'Briefing doc (Markdown to styled PDF)', outputTypes: ['doc'], checks: DOC_CHECKS, create: (env) => createDocRenderer({ cacheRoot: docCacheRoot(env.paths.home) }) },
 };
 
 export class Providers {
