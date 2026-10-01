@@ -93,7 +93,7 @@ export async function startServer(opts: StartOptions): Promise<RunningServer> {
       try { await sendFile(req, res, WEB_ROOT, rel); }
       catch (err) { if (err instanceof HttpError && err.status === 404) await sendFile(req, res, WEB_ROOT, 'index.html'); else throw err; }
     } catch (err: any) {
-      const status = err instanceof HttpError ? err.status : 500;
+      const status = err instanceof HttpError ? err.status : typeof err?.status === "number" ? err.status : 500;
       if (status === 500) app.log('error', `${req.method} ${url.pathname}: ${err?.stack ?? err}`);
       if (!res.headersSent) sendJson(res, status, { error: err?.message ?? String(err) });
       else res.end();

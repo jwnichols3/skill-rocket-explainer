@@ -56,7 +56,7 @@ main { outline: none; }
 .page-head { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
 .page-head h1 { margin: 0; }
 .page-head .spacer { flex: 1; }
-.page-head > :last-child:not(h1) { margin-left: auto; }
+.page-head .actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
 .crumbs { color: var(--muted); font-size: 13px; margin-bottom: 6px; }
 .crumbs a { color: var(--muted); }
 .muted { color: var(--muted); }

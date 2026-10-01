@@ -14,6 +14,10 @@ export interface Settings {
     tts: string;
     renderer: Record<OutputType, string>;
   };
+  /** Model dropdown entries (Claude model ids). */
+  models: { id: string; label: string }[];
+  efforts: string[];
+  defaults: { model: string; effort: string };
   /** Test-only knobs for the fake providers. */
   fake?: { failKinds?: string[]; delayMs?: number };
 }
@@ -27,6 +31,12 @@ export const DEFAULT_SETTINGS: Settings = {
     tts: 'fake',
     renderer: { video: 'fake', deck: 'fake', doc: 'fake', visual: 'fake' },
   },
+  models: [
+    { id: 'claude-opus-5-5', label: 'Opus 5.5' },
+    { id: 'claude-fable-5-1', label: 'Fable 5.1' },
+  ],
+  efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
+  defaults: { model: 'claude-opus-5-5', effort: 'high' },
 };
 
 function isObject(v: unknown): v is Record<string, any> {

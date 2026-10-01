@@ -26,7 +26,12 @@ export class Router {
 
   on(method: string, pattern: string, handler: Handler): this {
     const keys: string[] = [];
-    const re = new RegExp('^' + pattern.replace(/:(\w+)/g, (_, k) => { keys.push(k); return '([^/]+)'; }) + '$');
+    const src = pattern.replace(/:(\w+)|\*$/g, (all, k) => {
+      if (all === '*') { keys.push('rest'); return '(.+)'; }
+      keys.push(k);
+      return '([^/]+)';
+    });
+    const re = new RegExp('^' + src + '$');
     this.routes.push({ method, re, keys, handler });
     return this;
   }

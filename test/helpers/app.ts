@@ -40,3 +40,17 @@ export async function startTestApp(settings: Record<string, unknown> = {}): Prom
     },
   };
 }
+
+/** Poll a job until it leaves queued/running. */
+export async function waitForJob(app: TestApp, jobId: string, timeoutMs = 30_000): Promise<any> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const job = await app.json(`/api/jobs/${jobId}`);
+    if (job.status !== 'queued' && job.status !== 'running') return job;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  throw new Error(`job ${jobId} did not finish in ${timeoutMs}ms`);
+}
+
+export const post = (body: unknown): RequestInit => ({ method: 'POST', body: JSON.stringify(body) });
+export const put = (body: unknown): RequestInit => ({ method: 'PUT', body: JSON.stringify(body) });

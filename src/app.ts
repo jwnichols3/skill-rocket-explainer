@@ -5,11 +5,18 @@ import { loadSettings, saveSettings, type Settings } from './settings.ts';
 import { Router, HttpError } from './router.ts';
 import { Providers, validateProviders, AGENT_SURFACES, TTS_PROVIDERS, RENDERERS } from './providers/registry.ts';
 import { VERSION } from './version.ts';
+import { JobRunner } from './jobs.ts';
+import { StyleStore } from './style/store.ts';
+import { coreRoutes } from './routes/core.ts';
+import { styleRoutes } from './routes/styles.ts';
+import './providers/fake/responders.ts';
 
 export interface App {
   paths: Paths;
   settings(): Settings;
   providers: Providers;
+  jobs: JobRunner;
+  styles: StyleStore;
   log(level: 'info' | 'warn' | 'error', msg: string): void;
   onSettingsChanged(fn: (s: Settings) => void): void;
   shutdown(): Promise<void>;
@@ -20,17 +27,22 @@ export async function createApp(paths: Paths, router: Router): Promise<App> {
   const listeners: ((s: Settings) => void)[] = [];
   const providers = new Providers({ paths, settings: () => settings });
   const logFile = join(paths.logs, 'app.log');
+  const log = (level: string, msg: string) => { appendFile(logFile, `${new Date().toISOString()} ${level.toUpperCase()} ${msg}\n`).catch(() => {}); };
+  const jobs = new JobRunner(paths, (msg) => log('error', msg));
+  await jobs.init();
 
   const app: App = {
     paths,
     settings: () => settings,
     providers,
-    log(level, msg) {
-      appendFile(logFile, `${new Date().toISOString()} ${level.toUpperCase()} ${msg}\n`).catch(() => {});
-    },
+    jobs,
+    styles: new StyleStore(paths),
+    log,
     onSettingsChanged(fn) { listeners.push(fn); },
-    async shutdown() {},
+    async shutdown() { await jobs.shutdown(); },
   };
+  coreRoutes(app, router);
+  styleRoutes(app, router);
 
   router.get('/api/status', () => ({
     app: 'rocket-explainer',
