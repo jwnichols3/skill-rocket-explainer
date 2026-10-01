@@ -26,9 +26,9 @@ export async function modelPicker(initial = {}) {
 
 /**
  * TTS provider, voice and the controls that voice supports. Unsupported controls are
- * disabled with the reason. Optional preview button.
+ * disabled with the reason. Preview button (on by default) plays a short line.
  */
-export async function voicePicker(initial = {}, { preview = false } = {}) {
+export async function voicePicker(initial = {}, { preview = true } = {}) {
   const { settings, available } = await getSettings();
   const provider = h('select', available.tts.map((p) => h('option', { value: p.id, selected: p.id === (initial.provider ?? settings.providers.tts) }, p.label)));
   const voice = h('select');
