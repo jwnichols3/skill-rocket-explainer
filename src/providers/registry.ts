@@ -18,6 +18,8 @@ import { getSecret } from '../secrets.ts';
 import { createKokoroTts, kokoroChecks } from './kokoro/tts.ts';
 import { createVisualRenderer, VISUAL_CHECKS } from './visual/renderer.ts';
 import { createDocRenderer, docCacheRoot, DOC_CHECKS } from './doc/renderer.ts';
+import { createDeckRenderer } from './deck/renderer.ts';
+import { BROWSER_CHECK } from '../browser.ts';
 
 export interface ProviderEnv { paths: Paths; settings: () => Settings }
 
@@ -60,6 +62,7 @@ export const RENDERERS: Record<string, Factory<Renderer> & { outputTypes: Output
   },
   'html-visual': { label: 'One-pager (HTML to PNG)', outputTypes: ['visual'], create: () => createVisualRenderer(), checks: VISUAL_CHECKS },
   'markdown-pdf': { label: 'Briefing doc (Markdown to styled PDF)', outputTypes: ['doc'], checks: DOC_CHECKS, create: (env) => createDocRenderer({ cacheRoot: docCacheRoot(env.paths.home) }) },
+  'html-deck': { label: 'HTML slides + editable PowerPoint', outputTypes: ['deck'], create: () => createDeckRenderer(), checks: [BROWSER_CHECK] },
 };
 
 export class Providers {

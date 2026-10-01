@@ -272,3 +272,7 @@ details[open] > summary { margin-bottom: 8px; }
 .doc-md { position: relative; max-height: 80vh; overflow: auto; margin: 0; padding: 14px 16px; white-space: pre-wrap; font: 13px/1.6 var(--mono); color: var(--text); background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius); }
 .doc-md-heading { color: var(--accent); font-weight: 600; }
 .doc-md-heading.is-target { background: var(--accent-soft); outline: 1px solid var(--accent); border-radius: 4px; }
+
+/* deck viewer */
+.deck-nav { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.deck-index { flex: 1; text-align: center; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -199,3 +199,37 @@ responders['doc-figures'] = (inputs) => ({
     markdown: [`> **Key point:** ${s.visuals}`, /table|compar|side-by-side/i.test(s.visuals) ? '| Option | Strength |\n| --- | --- |\n| Queue | Buffers work |\n| Stream | Replays history |' : ''].filter(Boolean).join('\n\n'),
   })),
 });
+
+/**
+ * Deck slide: a small valid slide page plus its structured model, in the style's colours, no model needed.
+ * Visuals containing "[fake: broken once]" get an invalid model on the first attempt (tests the retry);
+ * "[fake: no model]" never gets a valid one (tests the full-slide picture fallback).
+ */
+responders['deck-slide'] = (inputs) => {
+  const colors = Object.fromEntries(palette(String(inputs.style ?? '')));
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+  const slide = inputs.slide ?? {};
+  const visuals = String(slide.visuals ?? '');
+  const broken = visuals.includes('[fake: no model]') || (visuals.includes('[fake: broken once]') && !inputs.previousError);
+  const html = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>${esc(String(slide.title ?? ''))}</title>
+<style>
+  html, body { margin: 0; width: ${inputs.width}px; height: ${inputs.height}px; overflow: hidden; background: ${colors.background ?? '#0b0f14'}; font-family: system-ui, sans-serif; }
+  h1 { position: absolute; left: 120px; top: 96px; margin: 0; font-size: 88px; color: ${colors.primary ?? '#4fd1c5'}; }
+  p { position: absolute; left: 120px; top: 300px; width: 1200px; margin: 0; font-size: 44px; color: ${colors.text ?? '#f7fafc'}; }
+  .box { position: absolute; left: 1440px; top: 300px; width: 360px; height: 200px; border-radius: 24px; background: ${colors.surface ?? '#141a22'}; border: 4px solid ${colors.accent ?? '#f6e05e'}; }
+  .num { position: absolute; right: 60px; bottom: 40px; font-size: 28px; color: ${colors.muted ?? '#a0aec0'}; }
+</style></head>
+<body><h1>${esc(String(slide.title ?? ''))}</h1><p>${esc(String(slide.body ?? ''))}</p><div class="box"></div><div class="num">${Number(inputs.index) + 1} / ${inputs.total}</div></body></html>
+`;
+  const model = broken ? { background: 'background', elements: [{ type: 'sparkle' }] } : {
+    background: 'background',
+    elements: [
+      { type: 'text', x: 120, y: 96, w: 1680, h: 120, text: String(slide.title ?? ''), font: 'display', size: 88, color: 'primary' },
+      { type: 'text', x: 120, y: 300, w: 1200, h: 300, text: String(slide.body ?? ''), font: 'body', size: 44, color: 'text' },
+      { type: 'shape', shape: 'roundRect', x: 1440, y: 300, w: 360, h: 200, fill: 'surface', line: 'accent', lineWidth: 4, radius: 24 },
+      { type: 'text', x: 1700, y: 1000, w: 160, h: 40, text: `${Number(inputs.index) + 1} / ${inputs.total}`, size: 28, color: 'muted', align: 'right' },
+    ],
+  };
+  return { __files: { [inputs.files.html]: html, [inputs.files.json]: JSON.stringify(model, null, 2) } };
+};

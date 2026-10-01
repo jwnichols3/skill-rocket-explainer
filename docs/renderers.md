@@ -170,3 +170,82 @@ The PDF in an iframe, with a PDF / Markdown toggle (the Markdown view shows `doc
 ### Tests
 
 `test/api/contract-renderer.test.ts` runs the shared contract for `markdown-pdf` (real Chromium, fake agent supplying `doc.css` and figures). `test/api/doc-renderer.test.ts` covers section order and anchors, the style's colours in the printed HTML/CSS, named destinations, pagination of a long doc, retry and fallback, stylesheet and figure caching, sanitising, and an explainer build/re-render plus a style doc sample through the app. `test/e2e/doc-viewer.spec.ts` covers the toggle and seeking.
+
+## Deck
+
+`html-deck` renders the `deck` output type: HTML slides for fidelity (`deck.html`, primary) and an
+editable PowerPoint file (`deck.pptx`). Code: `src/providers/deck/`. Needs the headless browser
+(`src/browser.ts`); `explainer doctor` checks it when `html-deck` is selected. The .pptx is written by
+[pptxgenjs](https://github.com/gitbrent/PptxGenJS) (MIT, pure JS).
+
+### How a render works
+
+1. Each slide is a scene, keyed by its scene ID. Clean slides (not in `dirtyScenes`) are copied from
+   `cacheDir/slides/<id>.*` and never go to the agent.
+2. For each dirty slide, an agent task (kind `deck-slide`, file tools only, no shell) runs in
+   `tasks/<id>/attempt-<n>/`, which holds `DESIGN.md`, `previous/` (this slide's last render, or the
+   failed attempt on a retry) and `reference/slide.html` (the nearest earlier slide, for consistent
+   chrome). `inputs.json` has the slide (title, body = the scene's narration, visuals), its index, the
+   deck outline, comments, and `previousError` on a retry. `expectFiles`:
+   - `slides/<id>.html`: a self-contained 1920x1080 page. Inline CSS, no `<script>`, no network
+     (remote `src`/`href`/`url()`/`@import` are rejected), token fonts with system fallbacks.
+   - `slides/<id>.json`: the slide model (below), in px on the same 1920x1080 slide.
+3. Checks: the HTML rules above; the model validates (`model.ts`, with specific messages); and the
+   page is loaded in headless Chromium at 1920x1080, where any text running past the slide edges is
+   reported. Any problem sends the slide back to the agent once with the problems. After the retry:
+   - HTML still invalid: the render fails with the problems.
+   - Model still invalid: the PowerPoint slide becomes a full-slide picture of the HTML, and the log
+     says so (`deck.pptx: slide s2 is a picture ...`).
+   - Text still cut off: the slide is kept and the log says so.
+4. `deck.html`: every slide is an isolated `srcdoc` iframe inside `<section class="slide" id="<id>">`,
+   so slides' CSS never collides. One slide is shown at a time, scaled to fit the window. Navigation:
+   arrow keys, space, PageUp/PageDown, Home/End, click (left third back, elsewhere forward) and the URL
+   hash `#<id>` (read and written). On each change it posts `{ type: 'deck-slide', id, index, total }`
+   to its parent. Printing gives one slide per page.
+5. `deck.pptx` (16:9, 13.333x7.5 in): one slide per scene, built from the models; speaker notes are the
+   model's `notes`, else the slide's body text.
+
+### Slide model (`slides/<id>.json`)
+
+```json
+{
+  "background": "background",
+  "elements": [
+    { "type": "text", "x": 120, "y": 96, "w": 1680, "h": 140, "text": "Title", "font": "display", "size": 88, "color": "text", "bold": true, "align": "left", "valign": "top" },
+    { "type": "bullets", "x": 120, "y": 300, "w": 800, "h": 500, "items": ["One", "Two"], "font": "body", "size": 40 },
+    { "type": "shape", "shape": "roundRect", "x": 1000, "y": 300, "w": 360, "h": 160, "fill": "surface", "line": "primary", "lineWidth": 4, "radius": 24, "text": "Label" },
+    { "type": "line", "x1": 1360, "y1": 380, "x2": 1500, "y2": 380, "color": "accent", "width": 4, "arrow": "end" },
+    { "type": "table", "x": 120, "y": 300, "w": 1680, "h": 400, "rows": [["Option", "Cost"], ["Queue", "$"]], "colW": [1000, 680], "header": true, "headerFill": "primary" },
+    { "type": "snapshot", "x": 1000, "y": 520, "w": 800, "h": 400, "why": "gradient illustration" }
+  ],
+  "notes": "optional speaker notes"
+}
+```
+
+Colours are DESIGN.md colour tokens or `#hex`; fonts are typography tokens (`display`, `body`, `mono`,
+resolved to the token's family; weight >= 600 means bold) or family names. Sizes are px (1920 px =
+960 pt). Every element becomes a native, editable PowerPoint object (text box, bulleted text box, preset
+shape with optional text, connector line with arrowheads, table), except `snapshot`: that region of the
+rendered HTML is captured as a PNG and placed as a picture. The prompt tells the agent to use it only
+for what the other types can't express, and to keep important text out of it.
+
+### Viewer
+
+`web/js/viewers/deck.js` shows `deck.html` in a sandboxed iframe with Prev/Next and "Slide n / N".
+It moves the deck by setting the iframe's hash, so `seek(scene)` (the scene chips) jumps to a slide, and
+it follows the deck's `deck-slide` messages so in-deck navigation keeps the index in sync. Links to
+`deck.html` and `deck.pptx` sit under it.
+
+### Tests
+
+- `test/api/contract-renderer.test.ts`: the shared contract with the fake agent supplying slides (no
+  model; uses the headless browser like `test/api/browser.test.ts`). With `LIVE=1`, the same contract runs
+  a 3-slide deck with a real model through `claude-subscription`.
+- `test/api/deck-renderer.test.ts`: one section per slide, .pptx slides with native text/shapes in token
+  colours and fonts, dirty-only re-render with reuse, the retry, the picture fallback, the cut-off check,
+  and the build/comment/re-render and style deck-sample loops in the app.
+- `test/e2e/deck-viewer.spec.ts`: Prev/Next, scene-chip seek and in-deck navigation sync, against the
+  real renderer with the fake agent.
+
+The fake agent's `deck-slide` responder understands `[fake: broken once]` (invalid model on the first
+attempt) and `[fake: no model]` (never valid) in a slide's visuals.

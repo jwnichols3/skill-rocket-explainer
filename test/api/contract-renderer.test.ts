@@ -53,3 +53,11 @@ rendererContract('html-visual', () => createVisualRenderer(), { outputType: 'vis
 // Briefing doc: real Markdown -> HTML -> PDF (headless Chromium); the fake agent supplies doc.css and figures.
 import { createDocRenderer } from '../../src/providers/doc/renderer.ts';
 rendererContract('markdown-pdf', () => createDocRenderer(), { outputType: 'doc', expectExt: ['.pdf', '.md'] });
+
+// Deck: HTML slides + editable .pptx. The fake agent supplies slide HTML + models (no model needed; uses the
+// headless browser like browser.test.ts). LIVE=1 adds a 3-slide run with a real model via claude-subscription.
+import { createDeckRenderer } from '../../src/providers/deck/renderer.ts';
+import { createClaudeSurface, SUBSCRIPTION } from '../../src/providers/claude/agent.ts';
+rendererContract('html-deck', () => createDeckRenderer(), { outputType: 'deck', expectExt: ['.html', '.pptx'] });
+rendererContract('html-deck (claude-subscription)', () => createDeckRenderer(),
+  { outputType: 'deck', expectExt: ['.html', '.pptx'], agent: () => createClaudeSurface(SUBSCRIPTION), skip: liveSkip, timeout: 1_800_000 });
