@@ -28,3 +28,37 @@ responders['style-names'] = (inputs) => {
 
 responders['probe'] = (inputs) => ({ answer: Number(inputs.a) + Number(inputs.b) });
 responders['probe-escape'] = () => ({ tried: true });
+
+import { palette } from '../../style/design.ts';
+
+/** HyperFrames scene: a minimal valid composition (title animating in over the style's background), no model needed. */
+responders['hyperframes-scene'] = (inputs) => {
+  const colors = Object.fromEntries(palette(String(inputs.style ?? '')));
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+  const id = String(inputs.compositionId);
+  const dur = Number(inputs.durationSeconds);
+  return { __files: { 'index.html': `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=${inputs.width}, height=${inputs.height}" />
+<script src="gsap.min.js"></script>
+<style>
+  body { margin: 0; background: ${colors.background ?? '#0b0f14'}; }
+  #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: linear-gradient(135deg, ${colors.background ?? '#0b0f14'}, ${colors.surface ?? '#141a22'}); }
+  #${id}-title { position: absolute; inset: 0; margin: 0; display: grid; place-items: center; font: 800 120px system-ui, sans-serif; color: ${colors.primary ?? '#4fd1c5'}; }
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="${id}" data-start="0" data-width="${inputs.width}" data-height="${inputs.height}" data-duration="${dur}">
+  <h1 id="${id}-title" class="clip" data-start="0" data-duration="${dur}" data-track-index="0">${esc(String(inputs.scene?.title ?? ''))}</h1>
+</div>
+<script>
+  const tl = gsap.timeline({ paused: true });
+  tl.fromTo("#${id}-title", { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, 0.1);
+  window.__timelines["${id}"] = tl;
+</script>
+</body>
+</html>
+` } };
+};

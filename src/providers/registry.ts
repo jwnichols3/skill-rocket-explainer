@@ -5,6 +5,8 @@ import type { CheckDef } from '../doctor.ts';
 import { createFakeAgent } from './fake/agent.ts';
 import { createFakeTts } from './fake/tts.ts';
 import { createFakeVideoRenderer } from './fake/renderer.ts';
+import { createHyperFramesRenderer } from './hyperframes/renderer.ts';
+import { HYPERFRAMES_CHECKS, hyperframesCacheRoot } from './hyperframes/checks.ts';
 
 export interface ProviderEnv { paths: Paths; settings: () => Settings }
 
@@ -26,6 +28,10 @@ export const TTS_PROVIDERS: Record<string, Factory<TtsProvider>> = {
 
 export const RENDERERS: Record<string, Factory<Renderer> & { outputTypes: OutputType[] }> = {
   fake: { label: 'Fake renderer (tests)', outputTypes: ['video'], create: () => createFakeVideoRenderer() },
+  hyperframes: {
+    label: 'HyperFrames (HTML + GSAP, Apache-2.0)', outputTypes: ['video'], checks: HYPERFRAMES_CHECKS,
+    create: (env) => createHyperFramesRenderer({ cacheRoot: hyperframesCacheRoot(env.paths.home) }),
+  },
 };
 
 export class Providers {
