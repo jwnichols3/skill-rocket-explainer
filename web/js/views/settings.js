@@ -21,7 +21,7 @@ export async function settingsView(root) {
     return [h('dt', h('label', { for: `${type}-renderer` }, label)), h('dd', select)];
   };
   root.append(h('section.page',
-    h('header.page-head', h('h1', 'Settings')),
+    h('header.page-head', h('h1', 'Settings'), h('div.actions', h('a.btn', { href: '/setup', 'data-link': true }, 'Setup'), h('a.btn', { href: '/diagnostics', 'data-link': true }, 'Diagnostics'))),
     h('div.panel',
       h('h2', 'Providers'),
       h('dl.kv',
