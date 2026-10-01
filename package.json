@@ -1,0 +1,30 @@
+{
+  "name": "rocket-explainer",
+  "version": "0.1.0",
+  "description": "Turn any source material into an explainer (video, deck, visual, briefing doc) in a reusable, iterated style.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "bin": {
+    "explainer": "bin/explainer.ts"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node bin/explainer.ts start",
+    "typecheck": "tsc --noEmit",
+    "test:api": "node --test --test-concurrency=4 'test/api/**/*.test.ts'",
+    "test:e2e": "playwright test",
+    "test": "npm run typecheck && npm run test:api && npm run test:e2e",
+    "test:live": "LIVE=1 node --test --test-concurrency=1 'test/api/**/*.test.ts'"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.3",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "yaml": "^2.9.1"
+  }
+}

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rocket Explainer</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" data-link>
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3c5 4 7 9 7 14l-3 5h-8l-3-5c0-5 2-10 7-14z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16" cy="13" r="2.5" fill="currentColor"/><path d="M12 22l-3 6 5-3M20 22l3 6-5-3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+      <span>Rocket Explainer</span>
+    </a>
+    <nav class="topnav" aria-label="Main">
+      <a href="/new" data-link>New</a>
+      <a href="/explainers" data-link>Explainers</a>
+      <a href="/styles" data-link>Styles</a>
+      <a href="/settings" data-link>Settings</a>
+    </nav>
+  </header>
+  <main id="view" tabindex="-1"></main>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
