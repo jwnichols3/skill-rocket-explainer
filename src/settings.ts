@@ -20,6 +20,10 @@ export interface Settings {
   defaults: { model: string; effort: string };
   /** Amazon Polly. Empty profile = the default AWS credential chain. */
   polly: { region: string; profile?: string };
+  /** First-run setup confirmed (CLI --yes or the web Setup page). */
+  setupComplete?: boolean;
+  /** Where the browser reaches the app when it runs behind a reverse proxy, e.g. https://explainer.devbox.example. */
+  publicUrl?: string;
   /** Set once seed styles have been copied in, so deleting one doesn't bring it back. */
   seeded?: boolean;
   /**
@@ -36,10 +40,11 @@ export const DEFAULT_SETTINGS: Settings = {
   port: 4870,
   host: '127.0.0.1',
   publicHostnames: [],
+  // Real providers by default; tests select the fakes explicitly.
   providers: {
-    agent: 'fake',
-    tts: 'fake',
-    renderer: { video: 'fake', deck: 'fake', doc: 'fake', visual: 'fake' },
+    agent: 'claude-subscription',
+    tts: 'polly',
+    renderer: { video: 'remotion', deck: 'html-deck', doc: 'markdown-pdf', visual: 'html-visual' },
   },
   models: [
     { id: 'claude-opus-5-5', label: 'Opus 5.5' },

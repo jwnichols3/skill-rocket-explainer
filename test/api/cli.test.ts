@@ -1,12 +1,18 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, readFile } from 'node:fs/promises';
+import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { runCli, freePort } from '../helpers/cli.ts';
 
 const homes: string[] = [];
-async function newHome() { const h = await mkdtemp(join(tmpdir(), 'explainer-cli-')); homes.push(h); return h; }
+/** A data dir on fake providers, so these tests don't depend on Claude, AWS or renderer installs. */
+async function newHome() {
+  const h = await mkdtemp(join(tmpdir(), 'explainer-cli-'));
+  homes.push(h);
+  await writeFile(join(h, 'settings.json'), JSON.stringify({ setupComplete: true, providers: { agent: 'fake', tts: 'fake', renderer: { video: 'fake', deck: 'fake', doc: 'fake', visual: 'fake' } } }));
+  return h;
+}
 after(async () => {
   for (const h of homes) { await runCli(['stop'], { EXPLAINER_HOME: h }); await rm(h, { recursive: true, force: true }); }
 });

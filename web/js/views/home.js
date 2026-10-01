@@ -1,4 +1,5 @@
 import { h } from '../dom.js';
+import { api } from '../api.js';
 
 const ENTRIES = [
   { href: '/new', title: 'New explainer', blurb: 'Point at sources, pick a style and an output, and build.', icon: 'M12 5v14M5 12h14' },
@@ -8,7 +9,9 @@ const ENTRIES = [
 ];
 
 export async function homeView(root) {
+  const { settings } = await api('/api/settings');
   root.append(h('section.page.home',
+    settings.setupComplete ? null : h('div.callout.info', { style: { marginTop: '24px' } }, h('strong', 'First run. '), 'Pick where the app runs and which providers it uses. ', h('a', { href: '/setup', 'data-link': true }, 'Finish setup')),
     h('div.hero',
       h('h1', 'Rocket Explainer'),
       h('p.lede', 'Turn a meeting, a paper or a folder into a narrated video, a deck, a one-pager or a briefing doc, in a style you have tuned until it is right.')),

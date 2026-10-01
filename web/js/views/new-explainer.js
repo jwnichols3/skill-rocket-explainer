@@ -1,12 +1,19 @@
 import { h, toast } from '../dom.js';
 import { api } from '../api.js';
 import { navigate } from '../router.js';
+import { OUTPUT_TYPES } from './explainer.js';
 import { KINDS, guessKind, attachPathCompletion, pathSuggestions } from '../components/sources.js';
 
 export async function newExplainerView(root) {
   // Prefill from the query string (the /explainer skill passes what it was given).
   const q = new URLSearchParams(location.search);
   const title = h('input', { id: 'ex-title', placeholder: 'Optional; we can suggest one' });
+  const styles = await api('/api/styles');
+  const wantStyle = (q.get('style') ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const guess = wantStyle ? styles.find((s) => s.id === q.get('style') || (s.name ?? '').toLowerCase().replace(/[^a-z0-9]/g, '').includes(wantStyle)) : null;
+  const styleSel = h('select', { id: 'ex-style' }, h('option', { value: '' }, 'Choose after the source report'),
+    styles.map((s) => h('option', { value: s.id, selected: s.id === guess?.id }, s.name ?? 'Untitled style')));
+  const typeSel = h('select', { id: 'ex-type' }, OUTPUT_TYPES.map((t) => h('option', { value: t.id, selected: t.id === (q.get('type') ?? 'video') }, `${t.label} · ${t.blurb}`)));
   const brief = h('textarea', { id: 'ex-brief', rows: 4, value: q.get('brief') ?? '', placeholder: 'e.g. “the options discussed on this call, for an exec audience”' });
   const list = h('div.stack');
   const rows = [];
@@ -38,11 +45,7 @@ export async function newExplainerView(root) {
       if (!brief.value.trim() && !sources.length) { toast('Say what to explain, or add a source', 'error'); return; }
       go.disabled = true;
       try {
-        // Style and type can arrive from the skill (?style=name&type=deck); otherwise they're chosen after the report.
-        const styleWanted = (q.get('style') ?? '').toLowerCase();
-        const styleId = styleWanted ? (await api('/api/styles')).find((s) => s.id === q.get('style') || (s.name ?? '').toLowerCase().includes(styleWanted))?.id ?? null : null;
-        const outputType = q.get('type') ?? undefined;
-        const ex = await api('/api/explainers', { method: 'POST', body: { title: title.value, brief: brief.value, sources, styleId, outputType } });
+        const ex = await api('/api/explainers', { method: 'POST', body: { title: title.value, brief: brief.value, sources, styleId: styleSel.value || null, outputType: typeSel.value } });
         await api(`/api/explainers/${ex.id}/report`, { method: 'POST', body: {} });
         navigate(`/explainers/${ex.id}`);
       } catch (err) { toast(err.message, 'error'); go.disabled = false; }
@@ -51,7 +54,10 @@ export async function newExplainerView(root) {
   h('div.panel',
     h('div.field', h('label', { for: 'ex-brief' }, 'What should it explain?'), brief,
       h('div.hint', 'The angle matters: who it is for, what they should walk away knowing.')),
-    h('div.field', h('label', { for: 'ex-title' }, 'Title'), title)),
+    h('div.field', h('label', { for: 'ex-title' }, 'Title'), title),
+    h('div.row', { style: { alignItems: 'flex-start' } },
+      h('div.field', { style: { flex: 1 } }, h('label', { for: 'ex-style' }, 'Style'), styleSel),
+      h('div.field', { style: { flex: 1 } }, h('label', { for: 'ex-type' }, 'Output'), typeSel))),
   h('div.panel',
     h('div.panel-head', h('h2', 'Sources'), h('span.muted.small', 'Files and folders autocomplete. Links are fetched. Connectors reach whatever the agent’s tools can.')),
     list, pathSuggestions(),

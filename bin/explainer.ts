@@ -5,12 +5,15 @@ import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defaultHome, ensureDataDir, readJson } from '../src/datadir.ts';
-import { loadSettings } from '../src/settings.ts';
+import { loadSettings, saveSettings } from '../src/settings.ts';
+import { parsePublicUrl } from '../src/routes/setup.ts';
 import { runChecks, formatChecks } from '../src/doctor.ts';
 
 const HELP = `explainer - Rocket Explainer local app
 
 usage:
+  explainer setup [--yes] [--port N] [--public-url URL] [--agent ID] [--aws-profile P] [--tts ID] [--video-renderer ID]
+                               first-run setup (safe to re-run); --yes skips the web Setup page
   explainer start [--port N]   start the app (no-op if already running)
   explainer stop               stop the app
   explainer open [path]        start if needed and open the app in a browser
@@ -45,6 +48,50 @@ async function call(info: ServerInfo, path: string, body?: unknown): Promise<any
   return data;
 }
 
+/** The address the browser should use: the reverse-proxy URL when one is configured. */
+async function browserUrl(info: ServerInfo, path = ''): Promise<string> {
+  const s = await loadSettings(p);
+  return (s.publicUrl || info.url) + path;
+}
+
+/** First-run setup: writes choices (keeping earlier ones), starts the app, runs doctor. Safe to re-run. */
+async function setup() {
+  const before = await loadSettings(p);
+  const patch: Record<string, any> = {};
+  const port = flag('--port');
+  if (port) patch.port = Number(port);
+  const pub = flag('--public-url');
+  if (pub !== undefined) {
+    try {
+      const parsed = parsePublicUrl(pub);
+      patch.publicUrl = parsed?.url ?? '';
+      patch.publicHostnames = parsed ? [parsed.host] : [];
+    } catch (err: any) { console.error(err.message); process.exit(1); }
+  }
+  const providers: Record<string, any> = {};
+  if (flag('--agent')) providers.agent = flag('--agent');
+  if (flag('--tts')) providers.tts = flag('--tts');
+  if (flag('--video-renderer')) providers.renderer = { video: flag('--video-renderer') };
+  if (Object.keys(providers).length) patch.providers = providers;
+  const profile = flag('--aws-profile');
+  if (profile) { patch.polly = { profile }; patch.bedrock = { profile }; }
+  if (process.argv.includes('--yes')) patch.setupComplete = true;
+  const settings = await saveSettings(p, patch);
+
+  // A port change needs a restart; otherwise reuse the running app.
+  const current = await running();
+  if (current && current.port !== settings.port) await stop();
+  const info = await start();
+
+  const checks = await runChecks(settings, p);
+  console.log(formatChecks(checks));
+  const missing = checks.filter((c) => !c.ok && !c.optional);
+  if (missing.length) console.log(`\n${missing.length} prerequisite(s) missing; the fixes are above.`);
+  const url = await browserUrl(info, settings.setupComplete ? '/' : '/setup');
+  console.log(`\n${before.setupComplete ? 'Setup updated' : 'Setup saved'}. Open ${url}`);
+  if (!process.argv.includes('--no-open')) openBrowser(url);
+}
+
 /** Creates an explainer from flags (the chat entry flow hands off through this). */
 async function newExplainer() {
   const info = await start();
@@ -66,7 +113,7 @@ async function newExplainer() {
       sources: flags('--source').map((value) => ({ value })),
     });
     await call(info, `/api/explainers/${e.id}/report`, {});
-    const url = `${info.url}/explainers/${e.id}`;
+    const url = await browserUrl(info, `/explainers/${e.id}`);
     console.log(url);
     if (!process.argv.includes('--no-open')) openBrowser(url);
   } catch (err: any) {
@@ -139,6 +186,7 @@ switch (cmd) {
   case 'start': await start(); break;
   case 'stop': await stop(); break;
   case 'new': await newExplainer(); break;
+  case 'setup': await setup(); break;
   case 'styles': {
     const info = await start();
     const styles: { id: string; name: string | null; savedAt: string | null }[] = await call(info, '/api/styles');
@@ -147,14 +195,16 @@ switch (cmd) {
   }
   case 'open': {
     const info = await start();
-    const url = info.url + (process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '/');
+    const url = await browserUrl(info, process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '/');
     console.log(url);
     openBrowser(url);
     break;
   }
   case 'status': {
     const info = await running();
-    console.log(info ? `running at ${info.url} (pid ${info.pid})` : 'not running');
+    const s = await loadSettings(p);
+    const setupNote = s.setupComplete ? '' : ' · setup incomplete: run `explainer setup`';
+    console.log(info ? `running at ${await browserUrl(info)} (pid ${info.pid})${setupNote}` : `not running${setupNote}`);
     process.exit(info ? 0 : 1);
   }
   case 'doctor': {

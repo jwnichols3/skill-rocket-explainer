@@ -8,6 +8,7 @@ import { VERSION } from './version.ts';
 import { JobRunner } from './jobs.ts';
 import { StyleStore } from './style/store.ts';
 import { coreRoutes } from './routes/core.ts';
+import { setupRoutes } from './routes/setup.ts';
 import { seedStyles } from './style/seed.ts';
 import { secretRoutes } from './routes/secrets.ts';
 import { styleRoutes } from './routes/styles.ts';
@@ -25,6 +26,8 @@ export interface App {
   explainers: ExplainerStore;
   log(level: 'info' | 'warn' | 'error', msg: string): void;
   onSettingsChanged(fn: (s: Settings) => void): void;
+  /** Saves a settings patch and tells providers and listeners (e.g. the Host allowlist). */
+  updateSettings(patch: unknown): Promise<Settings>;
   shutdown(): Promise<void>;
 }
 
@@ -46,6 +49,12 @@ export async function createApp(paths: Paths, router: Router): Promise<App> {
     explainers: new ExplainerStore(paths),
     log,
     onSettingsChanged(fn) { listeners.push(fn); },
+    async updateSettings(patch) {
+      settings = await saveSettings(paths, patch);
+      providers.reset();
+      for (const fn of listeners) fn(settings);
+      return settings;
+    },
     async shutdown() { await jobs.shutdown(); },
   };
   settings = await seedStyles(paths, settings, app.styles, providers);
@@ -53,6 +62,7 @@ export async function createApp(paths: Paths, router: Router): Promise<App> {
   secretRoutes(app, router);
   styleRoutes(app, router);
   explainerRoutes(app, router);
+  setupRoutes(app, router);
   outputRoutes(app, router);
   bedrockRoutes(app, router);
 
@@ -79,10 +89,7 @@ export async function createApp(paths: Paths, router: Router): Promise<App> {
     if (bad) throw new HttpError(400, bad);
     const invalid = validateSettings(merge(settings, body));
     if (invalid) throw new HttpError(400, invalid);
-    settings = await saveSettings(paths, body);
-    providers.reset();
-    for (const fn of listeners) fn(settings);
-    return { settings };
+    return { settings: await app.updateSettings(body) };
   });
 
   return app;
