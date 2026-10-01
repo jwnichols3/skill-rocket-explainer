@@ -36,7 +36,7 @@ export function createFakeAgent(knobs: () => FakeAgentKnobs): AgentSurface {
         if (!(__files ?? {})[f]) return { ok: false, error: { kind: 'invalid-output', message: `agent did not write ${f}` } };
       }
       if (task.resultFile) await writeFile(join(opts.workdir, task.resultFile), JSON.stringify(output, null, 2));
-      return { ok: true, output, usage: { inputTokens: 0, outputTokens: 0, costUsd: 0, durationMs: Date.now() - started } };
+      return { ok: true, output, usage: { inputTokens: 1200, outputTokens: 300, costUsd: 0.02, durationMs: Date.now() - started } };
     },
   };
 }

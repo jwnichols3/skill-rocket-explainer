@@ -56,7 +56,7 @@ async function explainerView(root, { id }) {
       jobBox,
       h('div.grid-2',
         h('div.stack', ...workspaceExtensions.map((fn) => fn(ctx)), planPanel(ctx), reportPanel(ctx)),
-        h('div.stack', sourcesPanel(ctx), choicesPanel(ctx), historyPanel(ctx))));
+        h('div.stack', sourcesPanel(ctx), choicesPanel(ctx), historyPanel(ctx), usagePanel(ctx))));
   }
 
   async function remove(e) {
@@ -68,6 +68,26 @@ async function explainerView(root, { id }) {
     if (!ok) return;
     try { await api(`/api/explainers/${id}`, { method: 'DELETE' }); toast('Explainer deleted'); navigate('/explainers'); }
     catch (err) { toast(err.message, 'error'); }
+  }
+
+  /** Tokens and estimated cost, one row per job (report, plan, builds, re-renders). */
+  function usagePanel({ e }) {
+    const { entries, totals } = e.usage ?? { entries: [], totals: null };
+    if (!entries.length) return null;
+    const n = (x) => x.toLocaleString('en-US');
+    const usd = (x) => (x > 0 && x < 0.01 ? '< $0.01' : `$${x.toFixed(2)}`);
+    const KIND = { 'source-report': 'Source report', plan: 'Plan' };
+    const label = (k) => KIND[k] ?? k.replace(/^(build|rerender)-(\w+)$/, (_, a, t) => `${a === 'build' ? 'Build' : 'Re-render'} ${t}`);
+    const rows = entries.map((u) => h('tr',
+      h('td', label(u.kind), u.status !== 'succeeded' ? h('span.muted.small', ` (${u.status})`) : null, h('div.small.muted', timeAgo(u.at))),
+      h('td.small', u.models.join(', ') || '-'),
+      h('td.small', u.agentRuns ? `${n(u.inputTokens)} in / ${n(u.outputTokens)} out` : '-'),
+      h('td.small', u.ttsChars ? `${n(u.ttsChars)} chars` : '-'),
+      h('td.small', u.ttsCostUsd === null && u.ttsChars ? `${usd(u.costUsd)} + narration` : usd(u.costUsd))));
+    return h('div.panel', h('details.usage',
+      h('summary', `Usage · ≈ ${usd(totals.costUsd)} · ${n(totals.inputTokens + totals.outputTokens)} tokens`),
+      h('table.table', h('thead', h('tr', h('th', 'Job'), h('th', 'Model'), h('th', 'Tokens'), h('th', 'Narration'), h('th', 'Est. cost'))), h('tbody', rows)),
+      h('p.hint', 'Costs are estimates. Agent cost is Claude Code\'s figure at API list prices, so on a Claude subscription it is not what you are billed. Narration uses Amazon Polly list prices; Kokoro is free; ElevenLabs depends on your plan.')));
   }
 
   /** Everything that happened, oldest first: sources, report, plan versions, output rounds, comments. */

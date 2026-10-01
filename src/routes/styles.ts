@@ -1,3 +1,4 @@
+import { metered, appendUsage, readUsage } from '../usage.ts';
 import type { App } from '../app.ts';
 import type { Router } from '../router.ts';
 import { HttpError } from '../router.ts';
@@ -28,9 +29,20 @@ export function pickModel(app: App, body: any): { model: string; effort: string 
   return { model, effort };
 }
 
+/** Where a job target's usage is kept: `explainer:<id>` or `style:<id>`. */
+function usageDir(app: App, target: string): string | null {
+  const [type, id] = target.split(':');
+  if (type === 'explainer') return app.explainers.dir(id);
+  if (type === 'style') return app.styles.dir(id);
+  return null;
+}
+
 export function startJob(app: App, kind: string, target: string, fn: Parameters<App['jobs']['start']>[2]) {
+  const dir = usageDir(app, target);
+  const job: typeof fn = !dir ? fn : (ctx) => metered({ id: ctx.id, kind, signal: ctx.signal }, () => fn(ctx),
+    (e) => appendUsage(dir, e).catch((err) => ctx.log(`usage not recorded: ${err.message}`)));
   try {
-    return app.jobs.start(kind, target, fn);
+    return app.jobs.start(kind, target, job);
   } catch (err) {
     if (err instanceof ConflictError) throw new HttpError(409, err.message);
     throw err;
@@ -49,7 +61,7 @@ export function styleRoutes(app: App, router: Router) {
     return store.create({ name: body.name ?? null, description: body.description.trim(), voice, model, effort });
   });
 
-  router.get('/api/styles/:id', ({ params }) => store.get(params.id));
+  router.get('/api/styles/:id', async ({ params }) => ({ ...(await store.get(params.id)), usage: await readUsage(store.dir(params.id)) }));
 
   // Quick, synchronous: 3-6 concrete additions that make a description more agent-usable.
   router.post('/api/styles/suggest', async ({ body }) => {

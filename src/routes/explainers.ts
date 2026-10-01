@@ -1,3 +1,4 @@
+import { readUsage } from '../usage.ts';
 import type { App } from '../app.ts';
 import type { Router } from '../router.ts';
 import { HttpError } from '../router.ts';
@@ -47,7 +48,7 @@ export function explainerRoutes(app: App, router: Router) {
     });
   });
 
-  router.get('/api/explainers/:id', async ({ params }) => withUrls(await store.get(params.id)));
+  router.get('/api/explainers/:id', async ({ params }) => ({ ...withUrls(await store.get(params.id)), usage: await readUsage(store.dir(params.id)) }));
 
   router.put('/api/explainers/:id', async ({ params, body }) => {
     const current = await store.get(params.id);

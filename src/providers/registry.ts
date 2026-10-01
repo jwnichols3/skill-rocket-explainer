@@ -2,6 +2,7 @@ import type { AgentSurface, TtsProvider, Renderer } from './types.ts';
 import type { Settings, OutputType } from '../settings.ts';
 import type { Paths } from '../datadir.ts';
 import type { CheckDef } from '../doctor.ts';
+import { meterAgent, meterTts } from '../usage.ts';
 import { createFakeAgent } from './fake/agent.ts';
 import { createFakeTts } from './fake/tts.ts';
 import { createFakeVideoRenderer, createFakeDocumentRenderer } from './fake/renderer.ts';
@@ -78,8 +79,14 @@ export class Providers {
     return this.cache.get(key) as T;
   }
 
-  agent(id = this.env.settings().providers.agent): AgentSurface { return this.get('agent surface', AGENT_SURFACES, id); }
-  tts(id = this.env.settings().providers.tts): TtsProvider { return this.get('TTS provider', TTS_PROVIDERS, id); }
+  // Metered: calls made inside a job count toward that job's usage (src/usage.ts).
+  agent(id = this.env.settings().providers.agent): AgentSurface { return this.metered('agent', () => meterAgent(this.get('agent surface', AGENT_SURFACES, id)), id); }
+  tts(id = this.env.settings().providers.tts): TtsProvider { return this.metered('tts', () => meterTts(this.get('TTS provider', TTS_PROVIDERS, id)), id); }
+  private metered<T>(kind: string, make: () => T, id: string): T {
+    const key = `metered:${kind}:${id}`;
+    if (!this.cache.has(key)) this.cache.set(key, make());
+    return this.cache.get(key) as T;
+  }
   renderer(type: OutputType, id = this.env.settings().providers.renderer[type]): Renderer {
     const r = this.get<Renderer>('renderer', RENDERERS, id);
     if (!r.outputTypes.includes(type)) throw new Error(`renderer "${id}" does not produce ${type}`);
