@@ -45,7 +45,8 @@ export async function probeDurationMs(file: string): Promise<number> {
 export async function probeStreams(file: string): Promise<string[]> {
   const r = await exec('ffprobe', ['-v', 'error', '-show_entries', 'stream=codec_type', '-of', 'csv=p=0', file]);
   if (r.code !== 0) throw new Error(`ffprobe failed on ${file}: ${r.stderr.trim()}`);
-  return r.stdout.split('\n').map((s) => s.trim()).filter(Boolean);
+  // Some encoders add stream side data, which makes csv lines like 'video,'; keep the first field.
+  return r.stdout.split('\n').map((s) => s.split(',')[0].trim()).filter(Boolean);
 }
 
 /** Write a silent 16-bit mono PCM WAV of the given length. */
