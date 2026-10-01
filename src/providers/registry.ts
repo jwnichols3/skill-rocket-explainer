@@ -7,6 +7,9 @@ import { createFakeTts } from './fake/tts.ts';
 import { createFakeVideoRenderer } from './fake/renderer.ts';
 import { createPollyTts, pollyChecks } from './polly/tts.ts';
 import { createClaudeSurface, claudeChecks, SUBSCRIPTION } from './claude/agent.ts';
+import { createRemotionRenderer } from './remotion/renderer.ts';
+import { remotionProjectDir } from './remotion/project.ts';
+import { REMOTION_CHECKS } from './remotion/checks.ts';
 
 export interface ProviderEnv { paths: Paths; settings: () => Settings }
 
@@ -30,6 +33,7 @@ export const TTS_PROVIDERS: Record<string, Factory<TtsProvider>> = {
 
 export const RENDERERS: Record<string, Factory<Renderer> & { outputTypes: OutputType[] }> = {
   fake: { label: 'Fake renderer (tests)', outputTypes: ['video'], create: () => createFakeVideoRenderer() },
+  remotion: { label: 'Remotion', outputTypes: ['video'], create: (env) => createRemotionRenderer({ projectDir: remotionProjectDir(env.paths.home) }), checks: REMOTION_CHECKS },
 };
 
 export class Providers {
