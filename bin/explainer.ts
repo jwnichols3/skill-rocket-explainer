@@ -16,6 +16,7 @@ usage:
                                first-run setup (safe to re-run); --yes skips the web Setup page
   explainer start [--port N]   start the app (no-op if already running)
   explainer stop               stop the app
+  explainer restart [--port N] stop and start the app (e.g. after an update)
   explainer open [path]        start if needed and open the app in a browser
   explainer status             print whether the app is running
   explainer new [--brief TEXT] [--source S]... [--style NAME] [--type video|deck|doc|visual] [--title T] [--no-open]
@@ -152,7 +153,7 @@ async function start(): Promise<ServerInfo> {
     await new Promise((r) => setTimeout(r, 150));
     const info = await running();
     if (info) {
-      if (process.argv[2] === 'start') console.log(`started at ${info.url}`);
+      if (process.argv[2] === 'start' || process.argv[2] === 'restart') console.log(`started at ${info.url}`);
       return info;
     }
     if (child.exitCode !== null) break;
@@ -185,6 +186,14 @@ const cmd = process.argv[2];
 switch (cmd) {
   case 'start': await start(); break;
   case 'stop': await stop(); break;
+  case 'restart': {
+    // Keep the port the app was running on unless --port says otherwise.
+    const was = await running();
+    await stop();
+    if (was && !flag('--port')) process.argv.push('--port', String(was.port));
+    await start();
+    break;
+  }
   case 'new': await newExplainer(); break;
   case 'setup': await setup(); break;
   case 'styles': {

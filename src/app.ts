@@ -14,6 +14,7 @@ import { secretRoutes } from './routes/secrets.ts';
 import { styleRoutes } from './routes/styles.ts';
 import { explainerRoutes, outputRoutes } from './routes/explainers.ts';
 import { bedrockRoutes } from './routes/bedrock.ts';
+import { updateRoutes } from './routes/update.ts';
 import { ExplainerStore } from './explainer/store.ts';
 import './providers/fake/responders.ts';
 
@@ -65,6 +66,7 @@ export async function createApp(paths: Paths, router: Router): Promise<App> {
   setupRoutes(app, router);
   outputRoutes(app, router);
   bedrockRoutes(app, router);
+  updateRoutes(app, router);
 
   router.get('/api/status', () => ({
     app: 'rocket-explainer',
