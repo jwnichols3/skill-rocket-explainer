@@ -17,6 +17,7 @@ usage:
   explainer status             print whether the app is running
   explainer new [--brief TEXT] [--source S]... [--style NAME] [--type video|deck|doc|visual] [--title T] [--no-open]
                                create an explainer, start gathering its sources, open it
+  explainer styles             list style names
   explainer doctor             check prerequisites and print fixes
 
 Data dir: $EXPLAINER_HOME or ~/.rocket-explainer`;
@@ -89,7 +90,7 @@ async function running(): Promise<ServerInfo | null> {
 async function start(): Promise<ServerInfo> {
   const existing = await running();
   if (existing) {
-    console.log(`already running at ${existing.url}`);
+    if (process.argv[2] === 'start') console.log(`already running at ${existing.url}`);
     return existing;
   }
   await rm(p.serverInfo, { force: true });
@@ -104,7 +105,7 @@ async function start(): Promise<ServerInfo> {
     await new Promise((r) => setTimeout(r, 150));
     const info = await running();
     if (info) {
-      console.log(`started at ${info.url}`);
+      if (process.argv[2] === 'start') console.log(`started at ${info.url}`);
       return info;
     }
     if (child.exitCode !== null) break;
@@ -138,6 +139,12 @@ switch (cmd) {
   case 'start': await start(); break;
   case 'stop': await stop(); break;
   case 'new': await newExplainer(); break;
+  case 'styles': {
+    const info = await start();
+    const styles: { id: string; name: string | null; savedAt: string | null }[] = await call(info, '/api/styles');
+    for (const s of styles) console.log(`${s.name ?? 'Untitled style'}${s.savedAt ? '' : ' (draft)'}\t${s.id}`);
+    break;
+  }
   case 'open': {
     const info = await start();
     const url = info.url + (process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : '/');

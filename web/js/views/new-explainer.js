@@ -4,8 +4,10 @@ import { navigate } from '../router.js';
 import { KINDS, guessKind, attachPathCompletion, pathSuggestions } from '../components/sources.js';
 
 export async function newExplainerView(root) {
+  // Prefill from the query string (the /explainer skill passes what it was given).
+  const q = new URLSearchParams(location.search);
   const title = h('input', { id: 'ex-title', placeholder: 'Optional; we can suggest one' });
-  const brief = h('textarea', { id: 'ex-brief', rows: 4, placeholder: 'e.g. “the options discussed on this call, for an exec audience”' });
+  const brief = h('textarea', { id: 'ex-brief', rows: 4, value: q.get('brief') ?? '', placeholder: 'e.g. “the options discussed on this call, for an exec audience”' });
   const list = h('div.stack');
   const rows = [];
 
@@ -25,7 +27,8 @@ export async function newExplainerView(root) {
     list.append(row);
     return input;
   }
-  addRow();
+  const prefill = q.getAll('source');
+  if (prefill.length) for (const s of prefill) addRow(s); else addRow();
 
   const go = h('button.btn.primary', { type: 'submit' }, 'Gather sources');
   const form = h('form', {
@@ -35,7 +38,11 @@ export async function newExplainerView(root) {
       if (!brief.value.trim() && !sources.length) { toast('Say what to explain, or add a source', 'error'); return; }
       go.disabled = true;
       try {
-        const ex = await api('/api/explainers', { method: 'POST', body: { title: title.value, brief: brief.value, sources } });
+        // Style and type can arrive from the skill (?style=name&type=deck); otherwise they're chosen after the report.
+        const styleWanted = (q.get('style') ?? '').toLowerCase();
+        const styleId = styleWanted ? (await api('/api/styles')).find((s) => s.id === q.get('style') || (s.name ?? '').toLowerCase().includes(styleWanted))?.id ?? null : null;
+        const outputType = q.get('type') ?? undefined;
+        const ex = await api('/api/explainers', { method: 'POST', body: { title: title.value, brief: brief.value, sources, styleId, outputType } });
         await api(`/api/explainers/${ex.id}/report`, { method: 'POST', body: {} });
         navigate(`/explainers/${ex.id}`);
       } catch (err) { toast(err.message, 'error'); go.disabled = false; }
