@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { navigate, registerRoute } from '../router.js';
 import { jobView } from '../components/job.js';
 import { voicePicker, modelPicker } from '../components/pickers.js';
+import { pendingReferences, referencesPanel, suggestionBox } from '../components/references.js';
 
 export const styleTitle = (s) => s.name ?? 'Untitled style';
 
@@ -31,15 +32,20 @@ async function newStyleView(root) {
   const voice = await voicePicker({}, { preview: true });
   const model = await modelPicker();
   const go = h('button.btn.primary', { type: 'submit' }, 'Render sample');
+  const refs = pendingReferences({ onChange: () => { go.textContent = refs.hasVideo() ? 'Analyze reference video' : 'Render sample'; } });
 
   const form = h('form', {
     onsubmit: async (e) => {
       e.preventDefault();
-      if (!description.value.trim()) { toast('Describe the style first', 'error'); description.focus(); return; }
+      if (!description.value.trim() && !refs.hasVideo()) { toast('Describe the style first', 'error'); description.focus(); return; }
       go.disabled = true;
       try {
-        const style = await api('/api/styles', { method: 'POST', body: { name: later.checked ? null : name.value || null, description: description.value, voice: voice.value(), ...model.value() } });
-        await api(`/api/styles/${style.id}/sample`, { method: 'POST', body: {} });
+        const desc = description.value.trim() || 'Match the look and feel of the reference video.';
+        const style = await api('/api/styles', { method: 'POST', body: { name: later.checked ? null : name.value || null, description: desc, voice: voice.value(), ...model.value() } });
+        // With a reference video, its instructions come first; the user reviews them, then renders the sample.
+        const { video } = await refs.attach(style.id);
+        if (video) await api(`/api/styles/${style.id}/references/${video.id}/analyze`, { method: 'POST', body: {} });
+        else await api(`/api/styles/${style.id}/sample`, { method: 'POST', body: {} });
         navigate(`/styles/${style.id}`);
       } catch (err) {
         toast(err.message, 'error');
@@ -54,7 +60,9 @@ async function newStyleView(root) {
         h('div.field', h('label', { for: 'style-name' }, 'Name'), name,
           h('label.row', { for: 'style-later', style: { marginTop: '8px', fontWeight: 400 } }, later, 'Decide later (we’ll suggest names when you save)')),
         h('div.field', h('label', { for: 'style-desc' }, 'Describe the style'), description,
-          h('div.hint', 'Concrete beats vague: “titles slam in, neon blue/green on near-black, slow camera push-ins, a dry joke per scene”.')))),
+          h('div.hint', 'Concrete beats vague: “titles slam in, neon blue/green on near-black, slow camera push-ins, a dry joke per scene”.'),
+          suggestionBox(description, () => model.value()))),
+      refs.el),
     h('div',
       h('div.panel', h('h2', 'Voice'), voice.el),
       h('div.panel', h('h2', 'Model'), model.el,
@@ -86,11 +94,16 @@ async function styleView(root, { id }) {
 
     // ---- Player + job ----
     const video = shown ? h('video.sample', { src: shown.sampleUrl, controls: true, preload: 'auto', playsInline: true }) : null;
-    const playerBox = h('div.player', video ?? h('div.placeholder', active[0] ? 'Rendering the first sample…' : 'No sample yet.'));
+    const firstSample = h('button.btn.primary', { onclick: async () => {
+      firstSample.disabled = true;
+      try { await api(`/api/styles/${id}/sample`, { method: 'POST', body: {} }); await load(); } catch (err) { toast(err.message, 'error'); firstSample.disabled = false; }
+    } }, 'Render first sample');
+    const placeholder = active[0]?.kind === 'style-reference-video' ? 'Reading the reference video…' : active[0] ? 'Rendering the first sample…' : 'No sample yet.';
+    const playerBox = h('div.player', video ?? h('div.placeholder', h('div.stack', h('div', placeholder), active[0] ? null : h('div', firstSample))));
     const jobBox = h('div');
     const job = active[0] ?? (last && last.status !== 'succeeded' && (!current || last.createdAt > current.createdAt) ? last : null);
     if (job) {
-      const v = jobView(job.id, { onEnd: (j) => { if (j.status === 'succeeded') { viewing = null; load(); } }, onRetry: () => rerender() });
+      const v = jobView(job.id, { onEnd: (j) => { if (j.status === 'succeeded') { viewing = null; load(); } }, onRetry: job.kind === 'style-sample' ? () => rerender() : undefined });
       stopJob = v.stop;
       jobBox.append(v.el);
     }
@@ -222,12 +235,13 @@ async function styleView(root, { id }) {
           savePanel,
           style.rounds.length ? h('div.panel', h('h3', 'Rounds'), rounds) : null,
           h('div.panel',
-            h('h3', 'Description'), h('p.muted', style.description),
+            h('h3', 'Description'), h('p.muted.style-description', { style: { whiteSpace: 'pre-wrap' } }, style.description),
             h('dl.kv.small',
               h('dt', 'Voice'), h('dd', `${style.voice.provider} · ${style.voice.voiceId}`),
               h('dt', 'Model'), h('dd', `${style.model} · ${style.effort}`))),
+          referencesPanel(style, { busy: !!active[0], onChange: load }),
           h('div.panel',
-            h('details', h('summary', 'Style instructions (DESIGN.md)'), h('pre.doc', style.design))))));
+            h('details', { open: !style.rounds.length }, h('summary', 'Style instructions (DESIGN.md)'), h('pre.doc', style.design))))));
   }
 
   async function rerender(body = {}) {

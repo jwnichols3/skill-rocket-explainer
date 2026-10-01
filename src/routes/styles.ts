@@ -8,6 +8,7 @@ import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { readJson } from '../datadir.ts';
 import { styleNamesPrompt } from '../prompts/style.ts';
+import { referenceFromUpload, referenceFromPath, referenceLink, runReferenceVideo, suggestImprovements } from '../pipeline/style-helpers.ts';
 
 export function parseVoice(app: App, v: any): VoiceChoice {
   const provider = typeof v?.provider === 'string' ? v.provider : app.settings().providers.tts;
@@ -48,6 +49,38 @@ export function styleRoutes(app: App, router: Router) {
   });
 
   router.get('/api/styles/:id', ({ params }) => store.get(params.id));
+
+  // Quick, synchronous: 3-6 concrete additions that make a description more agent-usable.
+  router.post('/api/styles/suggest', async ({ body }) => {
+    if (typeof body?.description !== 'string' || !body.description.trim()) throw new HttpError(400, 'description is required');
+    return { suggestions: await suggestImprovements(app, body.description.trim(), pickModel(app, body).model) };
+  });
+
+  // A reference: raw image/video bytes (content-type image/* or video/*, ?name=file name),
+  // or JSON { url, note } for a link, or JSON { path } for a file on this machine.
+  router.post('/api/styles/:id/references', async ({ req, params, url, body }) => {
+    await store.meta(params.id);
+    if (body === undefined && /^(image|video)\//i.test(req.headers['content-type'] ?? '')) {
+      return referenceFromUpload(app, params.id, req, url.searchParams.get('name') ?? '');
+    }
+    if (typeof body?.url === 'string') return referenceLink(app, params.id, body.url, typeof body.note === 'string' ? body.note : undefined);
+    if (typeof body?.path === 'string' && body.path.trim()) return referenceFromPath(app, params.id, body.path.trim());
+    throw new HttpError(400, 'send an image or video as the body, or JSON { url, note } or { path }');
+  });
+
+  router.del('/api/styles/:id/references/:rid', async ({ params }) => {
+    if (app.jobs.active(`style:${params.id}`)) throw new HttpError(409, 'wait for the running job to finish');
+    await store.removeReference(params.id, params.rid);
+    return store.get(params.id);
+  });
+
+  // Reference video -> sampled frames -> style instructions in the description and DESIGN.md draft.
+  router.post('/api/styles/:id/references/:rid/analyze', async ({ params }) => {
+    const ref = (await store.meta(params.id)).references?.find((r) => r.id === params.rid);
+    if (!ref) throw new HttpError(404, 'no such reference');
+    if (ref.kind !== 'video') throw new HttpError(400, 'only reference videos can be analyzed');
+    return startJob(app, 'style-reference-video', `style:${params.id}`, (ctx) => runReferenceVideo(app, params.id, params.rid, ctx));
+  });
 
   router.post('/api/styles/:id/sample', async ({ params }) => {
     await store.meta(params.id);

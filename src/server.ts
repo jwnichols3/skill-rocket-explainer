@@ -81,7 +81,9 @@ export async function startServer(opts: StartOptions): Promise<RunningServer> {
       const method = req.method === 'HEAD' ? 'GET' : req.method ?? 'GET';
       const route = router.match(method, url.pathname);
       if (route) {
-        const body = method === 'GET' ? undefined : await readBody(req);
+        // Binary uploads (images, video) are streamed by their route; every other body is JSON.
+        const raw = /^(image|video)\/|^application\/octet-stream/i.test(req.headers['content-type'] ?? '');
+        const body = method === 'GET' || raw ? undefined : await readBody(req);
         const result = await route.handler({ req, res, url, params: route.params, body });
         if (!res.headersSent && result !== undefined) sendJson(res, 200, result);
         else if (!res.headersSent) { res.writeHead(204); res.end(); }

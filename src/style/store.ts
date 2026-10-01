@@ -40,12 +40,32 @@ export interface StyleMeta {
   /** Set when the style was explicitly saved (named). */
   savedAt: string | null;
   clonedFrom?: string;
+  /** Reference images, videos and links that inform the style. Files live in references/. */
+  references?: StyleReference[];
+}
+
+export interface StyleReference {
+  id: string;
+  kind: 'image' | 'video' | 'link';
+  /** Display name: the original file name, or the link. */
+  name: string;
+  /** File name under references/ (image, video). */
+  file?: string;
+  url?: string;
+  note?: string;
+  /** Video: frames sampled for analysis, under references/<id>-frames/. */
+  frames?: { file: string; atMs: number }[];
+  /** Video: the style instructions the model derived from the frames. */
+  instructions?: string;
+  analyzedAt?: string;
+  createdAt: string;
 }
 
 export interface StyleView extends StyleMeta {
   design: string;
   palette: [string, string][];
   rounds: (Round & { designUrl: string; sampleUrl: string })[];
+  references: (StyleReference & { fileUrl?: string; frameUrls?: string[] })[];
 }
 
 export class StyleStore {
@@ -58,6 +78,7 @@ export class StyleStore {
     return join(this.p.styles, id);
   }
   roundDir(id: string, n: number) { return join(this.dir(id), 'rounds', String(n)); }
+  refsDir(id: string) { return join(this.dir(id), 'references'); }
 
   async exists(id: string): Promise<boolean> {
     return (await readJson<StyleMeta | null>(join(this.dir(id), 'style.json'), null)) !== null;
@@ -92,7 +113,13 @@ export class StyleStore {
       designUrl: `/media/styles/${id}/rounds/${r.n}/DESIGN.md`,
       sampleUrl: `/media/styles/${id}/rounds/${r.n}/sample.mp4`,
     }));
-    return { ...m, design, palette: palette(design), rounds };
+    const media = `/media/styles/${id}/references`;
+    const references = (m.references ?? []).map((r) => ({
+      ...r,
+      ...(r.file ? { fileUrl: `${media}/${r.file}` } : {}),
+      ...(r.frames ? { frameUrls: r.frames.map((f) => `${media}/${r.id}-frames/${f.file}`) } : {}),
+    }));
+    return { ...m, design, palette: palette(design), rounds, references };
   }
 
   async list(): Promise<(StyleMeta & { palette: [string, string][]; sampleUrl: string | null; rounds: number })[]> {
@@ -161,6 +188,23 @@ export class StyleStore {
       await writeJson(join(this.dir(id), 'style.json'), m);
       return full;
     });
+  }
+
+  /** Records a reference; its file (if any) must already be in refsDir. */
+  async addReference(id: string, ref: StyleReference): Promise<StyleReference> {
+    await this.update(id, (m) => { m.references = [...(m.references ?? []), ref]; });
+    return ref;
+  }
+
+  async removeReference(id: string, refId: string): Promise<void> {
+    let gone: StyleReference | undefined;
+    await this.update(id, (m) => {
+      gone = m.references?.find((r) => r.id === refId);
+      if (!gone) throw Object.assign(new Error(`no reference ${refId}`), { status: 404 });
+      m.references = m.references!.filter((r) => r.id !== refId);
+    });
+    if (gone?.file) await rm(join(this.refsDir(id), gone.file), { force: true });
+    await rm(join(this.refsDir(id), `${refId}-frames`), { recursive: true, force: true });
   }
 
   async addComment(id: string, n: number, text: string, atMs?: number): Promise<StyleComment> {

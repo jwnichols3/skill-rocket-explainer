@@ -127,3 +127,20 @@ responders['hyperframes-scene'] = (inputs) => {
 </html>
 ` } };
 };
+
+/** Reference video: echoes the frame count into the instructions and the Identity section so tests can see it applied. */
+responders['style-reference-video'] = (inputs) => {
+  const n = (inputs.frames ?? []).length;
+  const instructions = `- Fake: ${n} frames from ${inputs.video?.name}: near-black background, neon cyan titles.\n- Fake: hard cuts every ~3 s.`;
+  const base = inputs.currentDesign && /^---\n/.test(inputs.currentDesign) ? inputs.currentDesign : designTemplate(String(inputs.description ?? ''));
+  return { instructions, design: base.replace(/(^## Identity[^\n]*\n)/m, `$1\nFrom the reference video (${n} frames): neon cyan on near-black.\n`) };
+};
+
+responders['style-suggestions'] = (inputs) => ({
+  suggestions: [
+    { topic: 'palette', text: 'Background #0b0f14, titles #4fd1c5, one accent #f6e05e for highlights only.' },
+    { topic: 'motion', text: 'Titles enter over 400ms with cubic-bezier(0.22, 1, 0.36, 1); scene transitions take 600ms.' },
+    { topic: 'camera', text: 'Slow push-in to 1.1x over each diagram; never shake the camera.' },
+    { topic: 'avoid', text: `Never set text below 32px, even for "${String(inputs.description ?? '').split(/\s+/).slice(0, 3).join(' ')}".` },
+  ],
+});
