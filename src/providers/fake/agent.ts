@@ -1,5 +1,5 @@
 import { writeFile, mkdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import type { AgentSurface, AgentTask, AgentRunOptions, AgentResult } from '../types.ts';
 
 export type Responder = (inputs: Record<string, any>, task: AgentTask) => unknown;
@@ -24,7 +24,17 @@ export function createFakeAgent(knobs: () => FakeAgentKnobs): AgentSurface {
       if (k.failKinds?.includes(task.kind)) return { ok: false, error: { kind: 'failed', message: `fake failure for ${task.kind}` } };
       const responder = responders[task.kind];
       if (!responder) return { ok: false, error: { kind: 'failed', message: `fake agent has no canned output for task "${task.kind}"` } };
-      const output = await responder(task.inputs, task);
+      const raw = (await responder(task.inputs, task)) as any;
+      // Responders return { __files: { 'scene.tsx': '...' }, ...output } to stand in for files a real agent writes.
+      const { __files, ...output } = raw ?? {};
+      for (const [name, content] of Object.entries((__files ?? {}) as Record<string, string>)) {
+        const target = join(opts.workdir, name);
+        await mkdir(dirname(target), { recursive: true });
+        await writeFile(target, content);
+      }
+      for (const f of task.expectFiles ?? []) {
+        if (!(__files ?? {})[f]) return { ok: false, error: { kind: 'invalid-output', message: `agent did not write ${f}` } };
+      }
       if (task.resultFile) await writeFile(join(opts.workdir, task.resultFile), JSON.stringify(output, null, 2));
       return { ok: true, output, usage: { inputTokens: 0, outputTokens: 0, costUsd: 0, durationMs: Date.now() - started } };
     },

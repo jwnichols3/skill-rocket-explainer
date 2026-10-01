@@ -13,6 +13,10 @@ export interface AgentTask {
   resultFile?: string;
   /** Extra directories the agent may read (sources, skills). */
   readDirs?: string[];
+  /** Files (relative to workdir) the agent must write; a run that doesn't is an invalid-output failure. */
+  expectFiles?: string[];
+  /** Tools the agent may use. Defaults to file read/write tools only, no shell. */
+  tools?: string[];
 }
 
 export interface AgentRunOptions {

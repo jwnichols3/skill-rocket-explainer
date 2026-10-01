@@ -53,11 +53,13 @@ const BASE_CHECKS: CheckDef[] = [
   },
 ];
 
-/** Provider modules contribute their own checks here. */
 export const CHECKS: CheckDef[] = [...BASE_CHECKS];
 
-export async function runChecks(settings: Settings, defs: CheckDef[] = CHECKS): Promise<Check[]> {
-  const active = defs.filter((d) => !d.when || d.when(settings));
+/** Base checks plus those contributed by the selected providers (see providers/registry.ts). */
+export async function runChecks(settings: Settings, defs?: CheckDef[]): Promise<Check[]> {
+  const { providerChecks } = await import('./providers/registry.ts');
+  const all = defs ?? [...CHECKS, ...providerChecks(settings)];
+  const active = all.filter((d) => !d.when || d.when(settings));
   return Promise.all(active.map(async (d) => {
     try {
       return { id: d.id, label: d.label, optional: d.optional, ...(await d.run(settings)) };

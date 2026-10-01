@@ -25,3 +25,6 @@ responders['style-names'] = (inputs) => {
   const cap = word[0].toUpperCase() + word.slice(1).toLowerCase();
   return { names: [`${cap} Drive`, `Neon ${cap}`, `${cap} Express`] };
 };
+
+responders['probe'] = (inputs) => ({ answer: Number(inputs.a) + Number(inputs.b) });
+responders['probe-escape'] = () => ({ tried: true });
