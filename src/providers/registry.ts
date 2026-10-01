@@ -6,6 +6,7 @@ import { createFakeAgent } from './fake/agent.ts';
 import { createFakeTts } from './fake/tts.ts';
 import { createFakeVideoRenderer } from './fake/renderer.ts';
 import { createPollyTts, pollyChecks } from './polly/tts.ts';
+import { createKokoroTts, kokoroChecks } from './kokoro/tts.ts';
 
 export interface ProviderEnv { paths: Paths; settings: () => Settings }
 
@@ -24,6 +25,7 @@ export const AGENT_SURFACES: Record<string, Factory<AgentSurface>> = {
 export const TTS_PROVIDERS: Record<string, Factory<TtsProvider>> = {
   fake: { label: 'Fake TTS (tests)', create: () => createFakeTts() },
   polly: { label: 'Amazon Polly', create: (env) => createPollyTts(() => env.settings().polly), checks: pollyChecks },
+  kokoro: { label: 'Kokoro (local)', create: (env) => createKokoroTts(env.paths), checks: kokoroChecks },
 };
 
 export const RENDERERS: Record<string, Factory<Renderer> & { outputTypes: OutputType[] }> = {

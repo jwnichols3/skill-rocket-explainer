@@ -17,3 +17,13 @@ npm run test:live               # opt-in contract runs against real providers
 ```
 
 Data lives in `~/.rocket-explainer/` (override with `EXPLAINER_HOME`).
+
+## Offline narration (Kokoro)
+
+Kokoro is a free local TTS (82M params, Apache-2.0 weights) with native word timings. It needs [uv](https://docs.astral.sh/uv/) and a one-time install (~1.2 GB: Python, torch, model, English voices) into `<data dir>/cache/kokoro`:
+
+```bash
+node src/providers/kokoro/install.ts   # then set providers.tts to "kokoro"
+```
+
+After that it runs fully offline. Delete `<data dir>/cache/kokoro` to uninstall.
