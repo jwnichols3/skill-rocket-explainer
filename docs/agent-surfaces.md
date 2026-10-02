@@ -37,9 +37,11 @@ profile fails at once as `auth`, with the fix (`aws sso login --profile <profile
   `AWS_SHARED_CREDENTIALS_FILE`). Keys are never read out.
 - `GET /api/bedrock/inference-profiles?profile=&region=`: the inference profiles the profile can
   use there (`ListInferenceProfiles`, system-defined and application), Anthropic Claude first, plus
-  `suggested`: a mapping for the app's model list (same model ignoring date/version suffixes,
-  preferring the region's geography prefix, then `global.`). The Discover button fills empty
-  mappings from it.
+  `suggested`: a mapping for the app's model list (same model ignoring date/version suffixes) in
+  the routing scope (`?scope=`, default `bedrock.scope`: `global`, `geo` or `in-region`), falling back
+  to a stricter scope, never to global. The Discover button fills empty mappings from it.
+  `problems` (`[]` when none) lists lookups that failed without failing the request: foundation
+  models, and in-region only, inference profiles.
 
 Doctor, when Bedrock is the default surface: Claude Code CLI present, the profile's credentials
 resolve, the default model is mapped.

@@ -163,10 +163,28 @@ async function saveSettings(body, ok) {
   }
 }
 
-// Regions where Bedrock runs Anthropic models; "Other…" covers any added later.
-const BEDROCK_REGIONS = ['us-east-1', 'us-east-2', 'us-west-2', 'us-gov-west-1', 'ca-central-1', 'sa-east-1',
-  'eu-central-1', 'eu-central-2', 'eu-west-1', 'eu-west-2', 'eu-west-3', 'eu-north-1', 'eu-south-1', 'eu-south-2',
-  'ap-northeast-1', 'ap-northeast-2', 'ap-northeast-3', 'ap-south-1', 'ap-south-2', 'ap-southeast-1', 'ap-southeast-2'];
+// Source regions for global cross-region inference, plus GovCloud; "Other…" covers any added later.
+const BEDROCK_REGIONS = ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2', 'ca-central-1', 'ca-west-1',
+  'eu-central-1', 'eu-central-2', 'eu-north-1', 'eu-south-1', 'eu-south-2', 'eu-west-1', 'eu-west-2', 'eu-west-3',
+  'ap-east-2', 'ap-northeast-1', 'ap-northeast-2', 'ap-northeast-3', 'ap-south-1', 'ap-south-2',
+  'ap-southeast-1', 'ap-southeast-2', 'ap-southeast-3', 'ap-southeast-4', 'ap-southeast-5', 'ap-southeast-6', 'ap-southeast-7',
+  'il-central-1', 'me-central-1', 'me-south-1', 'af-south-1', 'sa-east-1', 'mx-central-1', 'us-gov-west-1', 'us-gov-east-1'];
+
+// Routing scopes: radio label, the line shown under the radios, and the name used in status text.
+const BEDROCK_SCOPES = [
+  ['global', 'Global (recommended)', 'Processed in any AWS commercial region; about 10% cheaper than Geographic or In-region. Your AWS organisation must allow global requests (aws:RequestedRegion = unspecified).', 'Global'],
+  ['geo', 'Geographic', 'Stays within the geography of your region (US, EU, Japan or Australia).', 'Geographic'],
+  ['in-region', 'In-region', 'Runs only in this region; most current Claude models are not offered this way.', 'In-region'],
+];
+
+/** Scope of a mapped id, from its prefix: `global.`, another `xx.` (geo), a bare id (in-region); ARNs are custom. */
+function idScope(id) {
+  if (!id) return null;
+  if (id.startsWith('global.')) return 'global';
+  if (/^[a-z-]+\.anthropic\./.test(id)) return 'geo';
+  if (id.startsWith('anthropic.')) return 'in-region';
+  return 'custom';
+}
 
 /** Default agent surface, and the Bedrock surface's AWS profile, region and model -> inference profile mapping. */
 function agentSurfacesPanel(settings, available) {
@@ -175,34 +193,93 @@ function agentSurfacesPanel(settings, available) {
 
   const b = settings.bedrock;
   const profile = awsProfileSelect('bedrock-profile', b.profile);
-  const region = selectWithOther({ id: 'bedrock-region', label: 'Region', options: BEDROCK_REGIONS.map((r) => ({ value: r })), value: b.region, placeholder: 'us-east-1' });
+  const region = selectWithOther({ id: 'bedrock-region', label: 'Region', options: BEDROCK_REGIONS.map((r) => ({ value: r })), value: b.region, placeholder: 'us-east-1', onChange: () => showScope() });
+
+  // Routing scope: saved with the other Bedrock settings, and sent by Discover as chosen.
+  const radios = {};
+  const scopeLine = h('div.hint', { 'aria-live': 'polite' });
+  const govNote = h('div.hint', 'GovCloud has no global routing.');
+  const scope = () => Object.keys(radios).find((k) => radios[k].checked);
+  const showScope = () => {
+    const gov = region.value.startsWith('us-gov-');
+    radios.global.disabled = gov;
+    if (gov && radios.global.checked) radios.geo.checked = true;
+    govNote.hidden = !gov;
+    scopeLine.textContent = BEDROCK_SCOPES.find(([k]) => k === scope())[2];
+    refreshBadges();
+  };
+  const routing = h('fieldset.field', h('legend', 'Routing'),
+    h('div.radio-row', BEDROCK_SCOPES.map(([value, label]) => h('label.choice',
+      (radios[value] = h('input', { type: 'radio', name: 'bedrock-scope', value, checked: value === b.scope, onchange: () => showScope() })), h('span', label)))),
+    scopeLine, govNote);
 
   // Until Discover runs, the choices are the saved mappings; afterwards, what Bedrock offers.
   let profileOptions = [...new Set(Object.values(b.models).filter(Boolean))].map((v) => ({ value: v }));
   const status = h('div.hint', 'Discover lists the inference profiles this AWS profile can use in the region, Anthropic Claude first.');
   const inputs = new Map();
+  const badges = new Map();
+  const labels = new Map();
   const mapping = h('tbody');
+  // Each row's badge names the scope of its current value; warn when it is not the chosen scope.
+  function refreshBadges() {
+    for (const [id, badge] of badges) {
+      const sc = idScope(inputs.get(id).value);
+      const warn = sc && sc !== 'custom' && sc !== scope();
+      badge.hidden = !sc;
+      // Not colour alone: the warning is also text, hidden visually.
+      badge.replaceChildren(sc ?? '', ...(warn ? [h('span.sr', ' (differs from Routing)')] : []));
+      badge.title = warn ? `${sc} - does not match the chosen routing` : '';
+      badge.className = `badge${warn ? ' warn' : ''}`;
+    }
+  }
   const setModels = (models) => {
     const typed = Object.fromEntries([...inputs].map(([id, i]) => [id, i.value]));
     inputs.clear();
+    badges.clear();
+    labels.clear();
     mapping.replaceChildren(...models.map((m) => {
-      const picker = selectWithOther({ label: `Inference profile for ${m.label || m.id}`, options: profileOptions, value: typed[m.id] ?? b.models[m.id] ?? '', none: 'not mapped', placeholder: 'inference profile id or ARN' });
+      const picker = selectWithOther({ label: `Inference profile for ${m.label || m.id}`, options: profileOptions, value: typed[m.id] ?? b.models[m.id] ?? '', none: 'not mapped', placeholder: 'inference profile id or ARN', onChange: refreshBadges });
       inputs.set(m.id, picker);
-      return h('tr', h('td', m.label || m.id, h('div.small.muted.mono', m.id)), h('td', picker.el));
+      labels.set(m.id, m.label || m.id);
+      badges.set(m.id, h('span.badge'));
+      return h('tr', h('td', m.label || m.id, h('div.small.muted.mono', m.id)), h('td', h('div.row', h('div', { style: { flex: 1 } }, picker.el), badges.get(m.id))));
     }));
+    refreshBadges();
   };
   setModels(settings.models);
+  showScope();
 
   const discover = h('button.btn.small', { type: 'button', async onclick() {
     discover.disabled = true;
     status.textContent = 'Asking Bedrock…';
+    // The answer is for these choices; if any changed meanwhile, it is discarded rather than saved under the new ones.
+    const asked = [profile.value, region.value, scope()];
     try {
-      const r = await api(`/api/bedrock/inference-profiles?profile=${encodeURIComponent(profile.value)}&region=${encodeURIComponent(region.value)}`);
+      const r = await api(`/api/bedrock/inference-profiles?profile=${encodeURIComponent(asked[0])}&region=${encodeURIComponent(asked[1])}&scope=${asked[2]}`);
+      if ([profile.value, region.value, scope()].some((v, i) => v !== asked[i])) {
+        status.textContent = 'Profile, region or Routing changed while Discover was running; Discover again.';
+        return;
+      }
       profileOptions = r.inferenceProfiles.map((p) => ({ value: p.id, label: `${p.name} · ${p.id}` }));
       for (const picker of inputs.values()) picker.setOptions(profileOptions);
       let filled = 0;
-      for (const [id, input] of inputs) if (!input.value && r.suggested[id]) { input.value = r.suggested[id]; filled++; }
-      status.textContent = `Found ${r.inferenceProfiles.length} inference profiles (${r.inferenceProfiles.filter((p) => p.anthropic).length} Anthropic Claude)${filled ? `; filled ${filled} mapping${filled === 1 ? '' : 's'}, save to keep them` : ''}.`;
+      let mismatched = 0;
+      const fell = {};
+      for (const [id, input] of inputs) {
+        const sug = r.suggested[id];
+        // A mapped row in another scope is kept; counted when Discover would suggest something else.
+        const sc = idScope(input.value);
+        if (input.value && sug && sug.id !== input.value && sc !== 'custom' && sc !== r.scope) mismatched++;
+        if (input.value || !sug) continue;
+        input.value = sug.id;
+        filled++;
+        if (sug.fellBack) fell[sug.scope] = (fell[sug.scope] ?? 0) + 1;
+      }
+      refreshBadges();
+      const unmapped = [...inputs].filter(([, input]) => !input.value).map(([id]) => labels.get(id));
+      // Anything stricter than global is regional pricing.
+      const fellText = Object.entries(fell).map(([sc, n]) => `${n} fell back to ${BEDROCK_SCOPES.find(([k]) => k === sc)[3]}`).join(', ');
+      status.textContent = `Found ${r.inferenceProfiles.length} inference profiles (${r.inferenceProfiles.filter((p) => p.anthropic).length} Anthropic Claude)${filled ? `; filled ${filled} mapping${filled === 1 ? '' : 's'}, save to keep them` : ''}${fellText ? `; ${fellText}${r.scope === 'global' ? ' (about 10% more)' : ''}` : ''}${mismatched ? `; ${mismatched} row${mismatched === 1 ? ' uses' : 's use'} another scope; clear ${mismatched === 1 ? 'it' : 'them'} and Discover again to re-suggest` : ''}.${unmapped.length ? ` No ${r.scope} option for: ${unmapped.join(', ')}.` : ''}${r.problems.map((p) => ` ${p.message}`).join('')}`;
     } catch (err) {
       status.textContent = '';
       toast(err.message, 'error');
@@ -210,7 +287,7 @@ function agentSurfacesPanel(settings, available) {
   } }, 'Discover');
   const save = h('button.btn.small.primary', { type: 'button', async onclick() {
     const models = Object.fromEntries([...inputs].map(([id, i]) => [id, i.value]));
-    const next = await saveSettings({ bedrock: { profile: profile.value, region: region.value, models } }, 'Bedrock settings saved');
+    const next = await saveSettings({ bedrock: { profile: profile.value, region: region.value, scope: scope(), models } }, 'Bedrock settings saved');
     if (next) Object.assign(b, next.bedrock);
   } }, 'Save Bedrock settings');
 
@@ -223,6 +300,7 @@ function agentSurfacesPanel(settings, available) {
     h('div.row', { style: { alignItems: 'flex-start' } },
       h('div.field', { style: { flex: 2 } }, h('label', { for: 'bedrock-profile' }, 'AWS profile for Bedrock'), profile),
       h('div.field', { style: { flex: 1 } }, h('label', { for: 'bedrock-region' }, 'Region'), region.el)),
+    routing,
     h('table.table', h('thead', h('tr', h('th', 'Model'), h('th', 'Inference profile'))), mapping),
     h('div.row', { style: { marginTop: '10px' } }, discover, save),
     status);

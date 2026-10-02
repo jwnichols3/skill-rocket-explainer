@@ -25,9 +25,9 @@ test('refresh asks Bedrock with the saved profile and region, merges, and caches
   discovery.foundationModels = async (q) => {
     asked = q;
     return [
-      { id: 'anthropic.claude-opus-5-5-v1:0', name: 'Claude Opus 5.5' },
-      { id: 'anthropic.claude-mythos-6-v1:0', name: 'Claude Mythos 6' },
-      { id: 'anthropic.claude-mythos-6-v1:0:200k', name: 'Claude Mythos 6' },
+      { id: 'anthropic.claude-opus-5-5-v1:0', name: 'Claude Opus 5.5', inferenceTypesSupported: ['INFERENCE_PROFILE'] },
+      { id: 'anthropic.claude-mythos-6-v1:0', name: 'Claude Mythos 6', inferenceTypesSupported: ['ON_DEMAND'] },
+      { id: 'anthropic.claude-mythos-6-v1:0:200k', name: 'Claude Mythos 6', inferenceTypesSupported: ['PROVISIONED'] },
     ];
   };
   const r = await app.json('/api/models/available/refresh', post({}));

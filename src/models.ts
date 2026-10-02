@@ -31,7 +31,7 @@ export async function refreshCatalog(home: string, s: Settings): Promise<ModelCa
   try {
     for (const f of await discovery.foundationModels({ profile: s.bedrock.profile ?? '', region: s.bedrock.region })) {
       // anthropic.claude-x-v1:0 and its context-window variants (…:200k) are one model.
-      const id = baseModel(f.id.replace(/:\d+k$/, ''));
+      const id = baseModel(f.id);
       const have = models.find((m) => m.id === id);
       if (have) { if (!have.sources.includes('bedrock')) have.sources.push('bedrock'); }
       else models.push({ id, label: f.name.replace(/^Claude\s+/, ''), sources: ['bedrock'] });

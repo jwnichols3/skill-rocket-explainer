@@ -74,33 +74,188 @@ test('profiles come from ~/.aws/config and ~/.aws/credentials, with names and re
   assert.deepEqual(by.ci.sources, ['credentials']);
 });
 
-test('inference profiles list Anthropic first and suggest a mapping for the model list', async (t) => {
+test('inference profiles list Anthropic first and suggest a mapping for the model list in the routing scope', async (t) => {
   const seen: any[] = [];
-  const orig = discovery.inferenceProfiles;
+  const orig = { ...discovery };
   discovery.inferenceProfiles = async (q) => { seen.push(q); return PROFILES.map((p) => ({ ...p })); };
-  t.after(() => { discovery.inferenceProfiles = orig; });
+  // Every model maps to a profile here, so foundation models are not listed.
+  let listed = 0;
+  discovery.foundationModels = async () => { listed++; return []; };
+  t.after(() => { Object.assign(discovery, orig); });
 
   const r = await app.json('/api/bedrock/inference-profiles?profile=sandbox&region=us-east-1');
   assert.deepEqual(seen, [{ profile: 'sandbox', region: 'us-east-1' }]);
   assert.equal(r.inferenceProfiles.at(-1).id, 'us.amazon.nova-pro-v1:0');
   assert.ok(r.inferenceProfiles.slice(0, -1).every((p: any) => p.anthropic));
-  // The region's geography wins over global; Fable has only an EU profile, so that one is suggested.
-  assert.deepEqual(r.suggested, { 'claude-opus-5-5': 'us.anthropic.claude-opus-5-5', 'claude-fable-5-1': 'eu.anthropic.claude-fable-5-1' });
+  // Global (the default) wins; Fable has only an EU profile, so it falls back to that.
+  assert.equal(r.scope, 'global');
+  assert.deepEqual(r.suggested, {
+    'claude-opus-5-5': { id: 'global.anthropic.claude-opus-5-5', scope: 'global', fellBack: false },
+    'claude-fable-5-1': { id: 'eu.anthropic.claude-fable-5-1', scope: 'geo', fellBack: true },
+  });
+
+  // ?scope= overrides the saved scope (Discover sends the unsaved choice).
+  const g = await app.json('/api/bedrock/inference-profiles?profile=sandbox&region=us-east-1&scope=geo');
+  assert.equal(g.scope, 'geo');
+  assert.deepEqual(g.suggested['claude-opus-5-5'], { id: 'us.anthropic.claude-opus-5-5', scope: 'geo', fellBack: false });
 
   // Defaults come from settings.
-  await app.json('/api/settings', put({ bedrock: { profile: 'ci', region: 'eu-west-1' } }));
+  await app.json('/api/settings', put({ bedrock: { profile: 'ci', region: 'eu-west-1', scope: 'geo' } }));
   const d = await app.json('/api/bedrock/inference-profiles');
   assert.equal(d.profile, 'ci');
   assert.equal(d.region, 'eu-west-1');
-  assert.equal(d.suggested['claude-fable-5-1'], 'eu.anthropic.claude-fable-5-1');
-  assert.equal(d.suggested['claude-opus-5-5'], 'global.anthropic.claude-opus-5-5');
+  assert.equal(d.scope, 'geo');
+  assert.deepEqual(d.suggested['claude-opus-5-5'], { id: 'us.anthropic.claude-opus-5-5', scope: 'geo', fellBack: false });
+  await app.json('/api/settings', put({ bedrock: { scope: 'global' } }));
+  assert.equal(listed, 0);
 
   assert.equal((await app.api('/api/bedrock/inference-profiles?region=not%20a%20region')).status, 400);
+  const bad = await app.api('/api/bedrock/inference-profiles?scope=apac');
+  assert.equal(bad.status, 400);
+  assert.match((await bad.json()).error, /not a routing scope: "apac"/);
+});
+
+test('in-region discovery lists foundation models and maps only those that run on demand; a failure there maps nothing', async (t) => {
+  const orig = { ...discovery };
+  const asked: any[] = [];
+  discovery.inferenceProfiles = async () => PROFILES.map((p) => ({ ...p }));
+  discovery.foundationModels = async (q) => {
+    asked.push(q);
+    return [
+      { id: 'anthropic.claude-opus-5-5', name: 'Claude Opus 5.5', inferenceTypesSupported: ['ON_DEMAND'] },
+      { id: 'anthropic.claude-fable-5-1', name: 'Claude Fable 5.1', inferenceTypesSupported: ['INFERENCE_PROFILE'] },
+    ];
+  };
+  t.after(() => { Object.assign(discovery, orig); });
+
+  const r = await app.json('/api/bedrock/inference-profiles?profile=sandbox&region=eu-west-2&scope=in-region');
+  assert.deepEqual(asked, [{ profile: 'sandbox', region: 'eu-west-2' }]);
+  assert.equal(r.scope, 'in-region');
+  assert.deepEqual(r.suggested, { 'claude-opus-5-5': { id: 'anthropic.claude-opus-5-5', scope: 'in-region', fellBack: false } });
+
+  discovery.foundationModels = async () => { throw new Error('AccessDenied: bedrock:ListFoundationModels'); };
+  const f = await app.json('/api/bedrock/inference-profiles?profile=sandbox&region=eu-west-2&scope=in-region');
+  assert.deepEqual(f.suggested, {});
+  assert.equal(f.inferenceProfiles.length, PROFILES.length);
+});
+
+test('discovery returns problems: [] when none, and a foundation-models failure as a problem', async (t) => {
+  const orig = { ...discovery };
+  discovery.inferenceProfiles = async () => PROFILES.map((p) => ({ ...p }));
+  discovery.foundationModels = async () => [{ id: 'anthropic.claude-opus-5-5', name: 'Claude Opus 5.5', inferenceTypesSupported: ['ON_DEMAND'] }];
+  t.after(() => { Object.assign(discovery, orig); });
+
+  const ok = await app.json('/api/bedrock/inference-profiles?profile=sandbox&region=eu-west-2&scope=in-region');
+  assert.deepEqual(ok.problems, []);
+
+  discovery.foundationModels = async () => { throw new Error('AccessDenied: bedrock:ListFoundationModels'); };
+  const f = await app.json('/api/bedrock/inference-profiles?profile=sandbox&region=eu-west-2&scope=in-region');
+  assert.equal(f.problems.length, 1);
+  assert.equal(f.problems[0].source, 'foundation-models');
+  assert.match(f.problems[0].message, /AccessDenied: bedrock:ListFoundationModels/);
+});
+
+test('in-region discovery survives a non-credential inference-profiles failure; global and geo still fail with 502', async (t) => {
+  const orig = { ...discovery };
+  discovery.inferenceProfiles = async () => { throw new Error('AccessDenied: bedrock:ListInferenceProfiles'); };
+  discovery.foundationModels = async () => [{ id: 'anthropic.claude-opus-5-5', name: 'Claude Opus 5.5', inferenceTypesSupported: ['ON_DEMAND'] }];
+  t.after(() => { Object.assign(discovery, orig); });
+
+  const r = await app.json('/api/bedrock/inference-profiles?profile=sandbox&region=eu-west-2&scope=in-region');
+  assert.deepEqual(r.inferenceProfiles, []);
+  assert.deepEqual(r.suggested, { 'claude-opus-5-5': { id: 'anthropic.claude-opus-5-5', scope: 'in-region', fellBack: false } });
+  assert.equal(r.problems.length, 1);
+  assert.equal(r.problems[0].source, 'inference-profiles');
+  assert.match(r.problems[0].message, /AccessDenied: bedrock:ListInferenceProfiles/);
+
+  for (const scope of ['global', 'geo']) {
+    assert.equal((await app.api(`/api/bedrock/inference-profiles?profile=sandbox&region=eu-west-2&scope=${scope}`)).status, 502, scope);
+  }
+  // Credential errors stay 401, in-region too.
+  discovery.inferenceProfiles = async () => { throw Object.assign(new Error('The SSO session associated with this profile has expired'), { name: 'CredentialsProviderError' }); };
+  assert.equal((await app.api('/api/bedrock/inference-profiles?profile=sandbox&region=eu-west-2&scope=in-region')).status, 401);
+});
+
+test('when global or geo falls back to in-region, the route also lists foundation models', async (t) => {
+  const orig = { ...discovery };
+  let listed = 0;
+  // No profile for Fable; it runs on demand in the region.
+  discovery.inferenceProfiles = async () => PROFILES.filter((p) => !p.id.includes('fable')).map((p) => ({ ...p }));
+  discovery.foundationModels = async () => { listed++; return [{ id: 'anthropic.claude-fable-5-1', name: 'Claude Fable 5.1', inferenceTypesSupported: ['ON_DEMAND'] }]; };
+  t.after(() => { Object.assign(discovery, orig); });
+
+  for (const scope of ['global', 'geo']) {
+    const r = await app.json(`/api/bedrock/inference-profiles?profile=sandbox&region=us-east-1&scope=${scope}`);
+    assert.deepEqual(r.suggested['claude-fable-5-1'], { id: 'anthropic.claude-fable-5-1', scope: 'in-region', fellBack: true }, scope);
+  }
+  assert.equal(listed, 2);
 });
 
 test('suggestions ignore date/version suffixes and do not confuse model generations', () => {
-  const s = suggestMapping(['claude-haiku-4-5', 'claude-opus-5', 'claude-sonnet-9'], PROFILES, 'us-east-1');
-  assert.deepEqual(s, { 'claude-haiku-4-5': 'us.anthropic.claude-haiku-4-5-20251001-v1:0', 'claude-opus-5': 'us.anthropic.claude-opus-5' });
+  const s = suggestMapping(['claude-haiku-4-5', 'claude-opus-5', 'claude-sonnet-9'], PROFILES, 'us-east-1', 'geo');
+  assert.deepEqual(s, {
+    'claude-haiku-4-5': { id: 'us.anthropic.claude-haiku-4-5-20251001-v1:0', scope: 'geo', fellBack: false },
+    'claude-opus-5': { id: 'us.anthropic.claude-opus-5', scope: 'geo', fellBack: false },
+  });
+});
+
+// Foundation models in the region: only Haiku 4.5 and Opus 5 can be called on demand without a profile.
+const FOUNDATION = [
+  { id: 'anthropic.claude-opus-5-5', name: 'Claude Opus 5.5', inferenceTypesSupported: ['INFERENCE_PROFILE'] },
+  { id: 'anthropic.claude-haiku-4-5-20251001-v1:0', name: 'Claude Haiku 4.5', inferenceTypesSupported: ['ON_DEMAND', 'INFERENCE_PROFILE'] },
+  { id: 'anthropic.claude-opus-5', name: 'Claude Opus 5', inferenceTypesSupported: ['ON_DEMAND'] },
+];
+const MODELS = ['claude-opus-5-5', 'claude-fable-5-1', 'claude-haiku-4-5', 'claude-opus-5'];
+
+test('global scope: global profile first, else the geo profile, else the bare in-region id; each fallback is flagged', () => {
+  assert.deepEqual(suggestMapping(MODELS, PROFILES, 'us-east-1', 'global', FOUNDATION), {
+    'claude-opus-5-5': { id: 'global.anthropic.claude-opus-5-5', scope: 'global', fellBack: false },
+    'claude-fable-5-1': { id: 'eu.anthropic.claude-fable-5-1', scope: 'geo', fellBack: true },
+    'claude-haiku-4-5': { id: 'us.anthropic.claude-haiku-4-5-20251001-v1:0', scope: 'geo', fellBack: true },
+    'claude-opus-5': { id: 'us.anthropic.claude-opus-5', scope: 'geo', fellBack: true },
+  });
+  const only = [{ id: 'anthropic.claude-sonnet-5-5', name: 'Claude Sonnet 5.5', inferenceTypesSupported: ['ON_DEMAND'] }];
+  assert.deepEqual(suggestMapping(['claude-sonnet-5-5'], [], 'eu-west-2', 'global', only),
+    { 'claude-sonnet-5-5': { id: 'anthropic.claude-sonnet-5-5', scope: 'in-region', fellBack: true } });
+});
+
+test('geo scope: the region\'s geo profile (jp. in Tokyo), else in-region; never a global profile', () => {
+  const tokyo: InferenceProfile[] = [
+    { id: 'global.anthropic.claude-opus-5-5', arn: 'arn:x', name: 'Opus 5.5 global', type: 'SYSTEM_DEFINED', anthropic: true },
+    { id: 'jp.anthropic.claude-opus-5-5', arn: 'arn:x', name: 'Opus 5.5 JP', type: 'SYSTEM_DEFINED', anthropic: true },
+    { id: 'global.anthropic.claude-sonnet-5-5', arn: 'arn:x', name: 'Sonnet 5.5 global', type: 'SYSTEM_DEFINED', anthropic: true },
+  ];
+  assert.deepEqual(suggestMapping(['claude-opus-5-5', 'claude-sonnet-5-5'], tokyo, 'ap-northeast-1', 'geo'),
+    { 'claude-opus-5-5': { id: 'jp.anthropic.claude-opus-5-5', scope: 'geo', fellBack: false } });
+  assert.deepEqual(suggestMapping(['claude-opus-5', 'claude-haiku-4-5'], PROFILES.filter((p) => !p.id.startsWith('us.')), 'us-east-1', 'geo', FOUNDATION), {
+    'claude-opus-5': { id: 'anthropic.claude-opus-5', scope: 'in-region', fellBack: true },
+    'claude-haiku-4-5': { id: 'anthropic.claude-haiku-4-5-20251001-v1:0', scope: 'in-region', fellBack: true },
+  });
+});
+
+test('in-region scope: only bare foundation model ids that run on demand; application profiles are never suggested', () => {
+  const app: InferenceProfile = { id: 'arn:aws:bedrock:us-east-1:000000000000:application-inference-profile/abc', arn: 'arn:aws:bedrock:us-east-1:000000000000:application-inference-profile/abc', name: 'claude-opus-5-5', type: 'APPLICATION', anthropic: true };
+  assert.deepEqual(suggestMapping(MODELS, [...PROFILES, app], 'us-east-1', 'in-region', FOUNDATION), {
+    'claude-haiku-4-5': { id: 'anthropic.claude-haiku-4-5-20251001-v1:0', scope: 'in-region', fellBack: false },
+    'claude-opus-5': { id: 'anthropic.claude-opus-5', scope: 'in-region', fellBack: false },
+  });
+  assert.deepEqual(suggestMapping(MODELS, PROFILES, 'us-east-1', 'in-region'), {});
+});
+
+test('in-region scope: a context-window variant (:200k) of a foundation model matches its model', () => {
+  const fm = [{ id: 'anthropic.claude-mythos-6-v1:0:200k', name: 'Claude Mythos 6', inferenceTypesSupported: ['ON_DEMAND'] }];
+  assert.deepEqual(suggestMapping(['claude-mythos-6'], [], 'us-east-1', 'in-region', fm),
+    { 'claude-mythos-6': { id: 'anthropic.claude-mythos-6-v1:0:200k', scope: 'in-region', fellBack: false } });
+});
+
+test('application profiles are never suggested in global or geo scope, even when their id would match', () => {
+  const appProfile = (id: string): InferenceProfile => ({ id, arn: 'arn:x', name: id, type: 'APPLICATION', anthropic: true });
+  assert.deepEqual(suggestMapping(['claude-opus-5-5'], [appProfile('global.anthropic.claude-opus-5-5')], 'us-east-1', 'global'), {});
+  assert.deepEqual(suggestMapping(['claude-sonnet-5-5'], [appProfile('us.anthropic.claude-sonnet-5-5')], 'us-east-1', 'geo'), {});
+  // With an in-region option, it falls back past the application profile.
+  const fm = [{ id: 'anthropic.claude-sonnet-5-5', name: 'Claude Sonnet 5.5', inferenceTypesSupported: ['ON_DEMAND'] }];
+  assert.deepEqual(suggestMapping(['claude-sonnet-5-5'], [appProfile('global.anthropic.claude-sonnet-5-5'), appProfile('us.anthropic.claude-sonnet-5-5')], 'us-east-1', 'global', fm),
+    { 'claude-sonnet-5-5': { id: 'anthropic.claude-sonnet-5-5', scope: 'in-region', fellBack: true } });
 });
 
 test('expired or missing credentials during discovery say how to sign in', async (t) => {
@@ -136,6 +291,18 @@ test('the model list can be edited; the default must stay in it and the effort m
   assert.equal(s.defaults.model, 'claude-opus-5-5');
 });
 
+test('bedrock routing scope defaults to global, accepts geo and in-region, and rejects anything else', async () => {
+  assert.equal(merge(DEFAULT_SETTINGS, { bedrock: { region: 'eu-west-1', models: {} } }).bedrock.scope, 'global');
+  assert.equal((await app.json('/api/settings')).settings.bedrock.scope, 'global');
+  assert.equal((await app.json('/api/settings', put({ bedrock: { scope: 'geo' } }))).settings.bedrock.scope, 'geo');
+  assert.equal((await app.json('/api/settings', put({ bedrock: { scope: 'in-region' } }))).settings.bedrock.scope, 'in-region');
+  const res = await app.api('/api/settings', put({ bedrock: { scope: 'apac' } }));
+  assert.equal(res.status, 400);
+  assert.match((await res.json()).error, /bedrock\.scope must be global, geo or in-region, not "apac"/);
+  assert.equal((await app.json('/api/settings')).settings.bedrock.scope, 'in-region');
+  await app.json('/api/settings', put({ bedrock: { scope: 'global' } }));
+});
+
 test('the agent surface is chosen per explainer, defaulting to settings, and validated', async () => {
   const { available } = await app.json('/api/settings');
   assert.ok(available.agent.some((a: any) => a.id === 'claude-bedrock'));
@@ -166,7 +333,7 @@ test('bedrock surface: unmapped model is "unavailable"; ids that already are Bed
   const dir = await mkdtemp(join(tmpdir(), 'bedrock-'));
   const r = await s.run({ kind: 'probe', prompt: 'x', inputs: {} }, { workdir: dir, model: 'claude-opus-5-5', effort: 'low' });
   assert.equal(r.ok, false);
-  if (!r.ok) { assert.equal(r.error.kind, 'unavailable'); assert.match(r.error.message, /Settings > Agent surfaces/); }
+  if (!r.ok) { assert.equal(r.error.kind, 'unavailable'); assert.match(r.error.message, /Settings > Models & agents > Amazon Bedrock/); }
   const b = { region: 'us-east-1', models: { 'claude-opus-5-5': 'us.anthropic.claude-opus-5-5', 'claude-fable-5-1': ' ' } };
   assert.equal(bedrockModel(b, 'claude-opus-5-5'), 'us.anthropic.claude-opus-5-5');
   assert.equal(bedrockModel(b, 'global.anthropic.claude-sonnet-5'), 'global.anthropic.claude-sonnet-5');
@@ -185,13 +352,31 @@ test('bedrock child env: Bedrock on with the chosen profile/region; API keys and
   const base = { PATH: '/bin', ANTHROPIC_API_KEY: 'k', ANTHROPIC_BASE_URL: 'u', AWS_ACCESS_KEY_ID: 'a', AWS_SECRET_ACCESS_KEY: 's', AWS_PROFILE: 'other',
     AWS_REGION: 'ap-south-1', AWS_CONFIG_FILE: '/x/config', CLAUDE_CODE_USE_VERTEX: '1', CLAUDE_CODE_OAUTH_TOKEN: 't', CLAUDE_CONFIG_DIR: '/c', CLAUDE_CODE_SESSION_ID: 'z' };
   const env = childEnv(bedrockSurfaceConfig(() => ({ profile: 'sandbox', region: 'eu-west-1', models: {} })), base);
-  assert.deepEqual(env, { PATH: '/bin', AWS_CONFIG_FILE: '/x/config', CLAUDE_CONFIG_DIR: '/c', CLAUDE_CODE_USE_BEDROCK: '1', AWS_REGION: 'eu-west-1', AWS_PROFILE: 'sandbox' });
+  assert.deepEqual(env, { PATH: '/bin', AWS_CONFIG_FILE: '/x/config', CLAUDE_CONFIG_DIR: '/c', CLAUDE_CODE_USE_BEDROCK: '1', AWS_REGION: 'eu-west-1', AWS_PROFILE: 'sandbox',
+    ANTHROPIC_BEDROCK_REGION_PREFIX: 'global' });
   const noProfile = childEnv(bedrockSurfaceConfig(() => ({ region: 'us-east-1', models: {} })), base);
   assert.equal(noProfile.AWS_PROFILE, undefined);
   // The subscription variant is unchanged: no AWS at all.
   const sub = childEnv(SUBSCRIPTION, base);
   assert.ok(!Object.keys(sub).some((k) => k.startsWith('AWS_') || k.startsWith('ANTHROPIC_')));
   assert.equal(sub.CLAUDE_CODE_OAUTH_TOKEN, 't');
+});
+
+test('bedrock child env: ANTHROPIC_BEDROCK_REGION_PREFIX follows the routing scope and region; an inherited one never leaks in', () => {
+  const prefix = (scope: 'global' | 'geo' | 'in-region', region: string) =>
+    childEnv(bedrockSurfaceConfig(() => ({ region, scope, models: {} })), { ANTHROPIC_BEDROCK_REGION_PREFIX: 'apac' }).ANTHROPIC_BEDROCK_REGION_PREFIX;
+  assert.equal(prefix('global', 'us-east-1'), 'global');
+  assert.equal(prefix('global', 'ap-southeast-7'), 'global');
+  assert.equal(prefix('global', 'us-gov-west-1'), undefined);
+  const geo: [string, string | undefined][] = [['us-east-1', 'us'], ['us-west-1', 'us'], ['ca-west-1', 'us'], ['eu-west-2', 'eu'], ['eu-south-2', 'eu'],
+    ['ap-northeast-1', 'jp'], ['ap-northeast-3', 'jp'], ['ap-southeast-2', 'au'], ['ap-southeast-4', 'au'],
+    ['ap-northeast-2', undefined], ['ap-south-1', undefined], ['sa-east-1', undefined], ['me-central-1', undefined], ['us-gov-east-1', undefined]];
+  for (const [region, want] of geo) assert.equal(prefix('geo', region), want, region);
+  assert.equal(prefix('in-region', 'us-east-1'), undefined);
+  assert.equal(prefix('in-region', 'eu-west-2'), undefined);
+  // The explicit model id still routes.
+  const c = bedrockSurfaceConfig(() => ({ region: 'us-east-1', scope: 'geo', models: { 'claude-opus-5-5': 'global.anthropic.claude-opus-5-5' } }));
+  assert.equal(c.model!('claude-opus-5-5'), 'global.anthropic.claude-opus-5-5');
 });
 
 const NO_PATHS = {} as import('../../src/datadir.ts').Paths;

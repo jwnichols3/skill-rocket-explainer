@@ -5,6 +5,7 @@ import type { CheckDef } from '../../doctor.ts';
 import { exec } from '../../media.ts';
 import { commandVersion } from '../../doctor.ts';
 import { fromIni } from '@aws-sdk/credential-providers';
+import type { BedrockScope } from '../../settings.ts';
 
 /**
  * Agent surface backed by headless Claude Code (`claude -p`). One factory, several
@@ -48,7 +49,22 @@ export const SUBSCRIPTION: ClaudeSurfaceConfig = {
   stripEnv: ['ANTHROPIC_*', 'AWS_*', 'CLAUDE_CODE_USE_*'],
 };
 
-export interface BedrockConfig { profile?: string; region: string; models: Record<string, string> }
+export interface BedrockConfig { profile?: string; region: string; scope?: BedrockScope; models: Record<string, string> }
+
+/**
+ * ANTHROPIC_BEDROCK_REGION_PREFIX for a scope: the cross-region prefix Claude Code prefers for
+ * ids it resolves itself. None for in-region, for geos Claude Code has no prefix for, and in
+ * GovCloud (Claude Code forces `us-gov.` there).
+ */
+function regionPrefix(scope: BedrockScope, region: string): string | undefined {
+  if (region.startsWith('us-gov-') || scope === 'in-region') return undefined;
+  if (scope === 'global') return 'global';
+  if (/^(us|ca)-/.test(region)) return 'us';
+  if (region.startsWith('eu-')) return 'eu';
+  if (['ap-northeast-1', 'ap-northeast-3'].includes(region)) return 'jp';
+  if (['ap-southeast-2', 'ap-southeast-4'].includes(region)) return 'au';
+  return undefined;
+}
 
 /** Values that already are Bedrock model ids: inference profile ids (`us.anthropic.…`), foundation model ids or ARNs. */
 const BEDROCK_ID = /^(arn:aws[\w-]*:bedrock:|([a-z-]+\.)?anthropic\.)/;
@@ -58,12 +74,12 @@ export function bedrockModel(b: BedrockConfig, id: string): string | { error: st
   const mapped = b.models?.[id]?.trim();
   if (mapped) return mapped;
   if (BEDROCK_ID.test(id)) return id;
-  return { error: `model "${id}" has no Bedrock inference profile mapped; map it in Settings > Agent surfaces > Bedrock (use Discover), or pick another model or surface` };
+  return { error: `model "${id}" has no Bedrock inference profile mapped; map it in Settings > Models & agents > Amazon Bedrock (use Discover), or pick another model or surface` };
 }
 
 export function bedrockAuthFix(b: { profile?: string }): string {
   const p = b.profile || 'default';
-  return `run \`aws sso login --profile ${p}\` (or refresh that profile's keys); the profile is set in Settings > Agent surfaces > Bedrock`;
+  return `run \`aws sso login --profile ${p}\` (or refresh that profile's keys); the profile is set in Settings > Models & agents > Amazon Bedrock`;
 }
 
 /** Messages from Claude Code / the AWS SDK that mean the AWS credentials are missing or expired. */
@@ -72,7 +88,8 @@ const AWS_AUTH = /sso session|token (has )?expired|expiredtoken|could not load c
 /**
  * Claude Code on Amazon Bedrock with the AWS profile and region from settings. The
  * subscription's account vars and any inherited AWS credentials/profile are dropped, then
- * CLAUDE_CODE_USE_BEDROCK, AWS_PROFILE and AWS_REGION are set. AWS_CONFIG_FILE and
+ * CLAUDE_CODE_USE_BEDROCK, AWS_PROFILE, AWS_REGION and ANTHROPIC_BEDROCK_REGION_PREFIX (from
+ * the routing scope) are set. AWS_CONFIG_FILE and
  * AWS_SHARED_CREDENTIALS_FILE are kept so non-default config paths keep working.
  */
 export function bedrockSurfaceConfig(bedrock: () => BedrockConfig): ClaudeSurfaceConfig {
@@ -80,10 +97,11 @@ export function bedrockSurfaceConfig(bedrock: () => BedrockConfig): ClaudeSurfac
     id: 'claude-bedrock',
     label: 'Claude Code on Amazon Bedrock',
     stripEnv: ['ANTHROPIC_*', 'CLAUDE_CODE_USE_*', 'CLAUDE_CODE_OAUTH_TOKEN', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_SESSION_TOKEN',
-      'AWS_BEARER_TOKEN_BEDROCK', 'AWS_PROFILE', 'AWS_DEFAULT_PROFILE', 'AWS_REGION', 'AWS_DEFAULT_REGION'],
+      'AWS_BEARER_TOKEN_BEDROCK', 'AWS_PROFILE', 'AWS_DEFAULT_PROFILE', 'AWS_REGION', 'AWS_DEFAULT_REGION', 'ANTHROPIC_BEDROCK_REGION_PREFIX'],
     env: () => {
       const b = bedrock();
-      return { CLAUDE_CODE_USE_BEDROCK: '1', AWS_REGION: b.region, ...(b.profile ? { AWS_PROFILE: b.profile } : {}) };
+      const prefix = regionPrefix(b.scope ?? 'global', b.region);
+      return { CLAUDE_CODE_USE_BEDROCK: '1', AWS_REGION: b.region, ...(b.profile ? { AWS_PROFILE: b.profile } : {}), ...(prefix ? { ANTHROPIC_BEDROCK_REGION_PREFIX: prefix } : {}) };
     },
     model: (id) => bedrockModel(bedrock(), id),
     authPattern: AWS_AUTH,

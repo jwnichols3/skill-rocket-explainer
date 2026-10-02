@@ -3,7 +3,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { BedrockClient, ListFoundationModelsCommand, ListInferenceProfilesCommand, type InferenceProfileType } from '@aws-sdk/client-bedrock';
 import { fromIni } from '@aws-sdk/credential-providers';
-import type { Settings } from '../../settings.ts';
+import type { Settings, BedrockScope } from '../../settings.ts';
 import type { CheckDef } from '../../doctor.ts';
 import { bedrockAuthFix, bedrockModel, awsCredentialsError } from './agent.ts';
 
@@ -104,12 +104,14 @@ async function sdkInferenceProfiles(q: BedrockQuery): Promise<InferenceProfile[]
   return out;
 }
 
-export interface FoundationModel { id: string; name: string }
+/** `inferenceTypesSupported` includes ON_DEMAND when the bare id can be called in the region. */
+export interface FoundationModel { id: string; name: string; inferenceTypesSupported: string[] }
 
 /** Active Anthropic foundation models in the region. */
 async function sdkFoundationModels(q: BedrockQuery): Promise<FoundationModel[]> {
   const r = await client(q).send(new ListFoundationModelsCommand({ byProvider: 'Anthropic' }), { abortSignal: AbortSignal.timeout(20_000) });
-  return (r.modelSummaries ?? []).filter((m) => m.modelLifecycle?.status !== 'LEGACY' && m.modelId).map((m) => ({ id: m.modelId!, name: m.modelName ?? m.modelId! }));
+  return (r.modelSummaries ?? []).filter((m) => m.modelLifecycle?.status !== 'LEGACY' && m.modelId)
+    .map((m) => ({ id: m.modelId!, name: m.modelName ?? m.modelId!, inferenceTypesSupported: m.inferenceTypesSupported ?? [] }));
 }
 
 /** Swappable for tests: the functions that ask Bedrock. */
@@ -126,29 +128,31 @@ export function isCredentialsError(err: any): boolean {
   return /Credential|Token|Expired|Unrecognized|SSO|InvalidSignature|InvalidClientTokenId/i.test(`${err?.name ?? ''} ${err?.message ?? ''}`);
 }
 
-/** Geography prefix Bedrock uses for cross-region profiles in a region. */
-function geoPrefix(region: string): string {
-  if (region.startsWith('us-gov-')) return 'us-gov';
-  if (region.startsWith('us-')) return 'us';
-  if (region.startsWith('eu-')) return 'eu';
-  if (region.startsWith('ap-')) return 'apac';
-  return 'global';
-}
+/** `us.anthropic.claude-haiku-4-5-20251001-v1:0` -> `claude-haiku-4-5`; context-window variants (`…:200k`) are the same model. */
+export const baseModel = (id: string) => id.replace(/:\d+k$/, '').replace(/^([a-z-]+\.)?anthropic\./, '').replace(/-v\d+(:\d+)?$/, '').replace(/-\d{8}$/, '');
 
-/** `us.anthropic.claude-haiku-4-5-20251001-v1:0` -> `claude-haiku-4-5`. */
-export const baseModel = (id: string) => id.replace(/^([a-z-]+\.)?anthropic\./, '').replace(/-v\d+(:\d+)?$/, '').replace(/-\d{8}$/, '');
+export interface Suggestion { id: string; scope: BedrockScope; fellBack: boolean }
+
+/** Scopes tried for each routing scope, in order: falling back to a stricter one is safe; to global never is. */
+const FALLBACK: Record<BedrockScope, BedrockScope[]> = { global: ['global', 'geo', 'in-region'], geo: ['geo', 'in-region'], 'in-region': ['in-region'] };
 
 /**
- * Suggested inference profile per app model id: the same model (ignoring date/version
- * suffixes), preferring the region's geography prefix, then `global.`, then any.
+ * Suggested Bedrock id per app model id: the same model (ignoring date/version suffixes) in the
+ * routing scope, else the next stricter scope (`fellBack`). A system-defined profile is global
+ * by its `global.` prefix and geo by any other (`us.`, `jp.`, ...); in-region is the bare
+ * foundation model id, when it runs on demand. Models with no match are left out.
  */
-export function suggestMapping(modelIds: string[], profiles: InferenceProfile[], region: string): Record<string, string> {
-  const prefs = [`${geoPrefix(region)}.`, 'global.'];
-  const out: Record<string, string> = {};
+export function suggestMapping(modelIds: string[], profiles: InferenceProfile[], region: string, scope: BedrockScope, foundationModels: FoundationModel[] = []): Record<string, Suggestion> {
+  const out: Record<string, Suggestion> = {};
   for (const m of modelIds) {
     const hits = profiles.filter((p) => p.type === 'SYSTEM_DEFINED' && p.anthropic && baseModel(p.id) === baseModel(m));
-    const best = prefs.map((pre) => hits.find((p) => p.id.startsWith(pre))).find(Boolean) ?? hits[0];
-    if (best) out[m] = best.id;
+    const candidates: Record<BedrockScope, string | undefined> = {
+      global: hits.find((p) => p.id.startsWith('global.'))?.id,
+      geo: hits.find((p) => !p.id.startsWith('global.') && /^[a-z-]+\.anthropic\./.test(p.id))?.id,
+      'in-region': foundationModels.find((f) => baseModel(f.id) === baseModel(m) && f.inferenceTypesSupported.includes('ON_DEMAND'))?.id,
+    };
+    const got = FALLBACK[scope].find((sc) => candidates[sc]);
+    if (got) out[m] = { id: candidates[got]!, scope: got, fellBack: got !== scope };
   }
   return out;
 }
@@ -169,7 +173,7 @@ export const BEDROCK_CHECKS: CheckDef[] = [
       const m = bedrockModel(s.bedrock, s.defaults.model);
       return typeof m === 'string'
         ? { ok: true, detail: `${s.defaults.model} -> ${m}` }
-        : { ok: false, detail: `default model ${s.defaults.model} is not mapped`, fix: 'open Settings > Agent surfaces > Bedrock, press Discover and save the mapping' };
+        : { ok: false, detail: `default model ${s.defaults.model} is not mapped`, fix: 'open Settings > Models & agents > Amazon Bedrock, press Discover and save the mapping' };
     },
   },
 ];

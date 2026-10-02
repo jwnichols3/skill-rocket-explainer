@@ -3,6 +3,10 @@ import { readJson, writeJson, type Paths } from './datadir.ts';
 export type OutputType = 'video' | 'deck' | 'doc' | 'visual';
 export const OUTPUT_TYPES: OutputType[] = ['video', 'deck', 'doc', 'visual'];
 
+/** Bedrock routing: any commercial region (global), the region's geography (geo), or the region alone. */
+export type BedrockScope = 'global' | 'geo' | 'in-region';
+export const BEDROCK_SCOPES: BedrockScope[] = ['global', 'geo', 'in-region'];
+
 export interface Settings {
   port: number;
   /** Bind address. Loopback only. */
@@ -29,9 +33,9 @@ export interface Settings {
   /**
    * Claude Code on Amazon Bedrock (agent surface `claude-bedrock`). Empty profile = the
    * `default` AWS profile. `models` maps app model ids to Bedrock inference profile ids
-   * or ARNs; an empty value means unmapped.
+   * or ARNs; an empty value means unmapped. `scope` is where requests may be processed.
    */
-  bedrock: { profile?: string; region: string; models: Record<string, string> };
+  bedrock: { profile?: string; region: string; scope: BedrockScope; models: Record<string, string> };
   /** Test-only knobs for the fake providers. */
   fake?: { failKinds?: string[]; delayMs?: number };
 }
@@ -53,7 +57,7 @@ export const DEFAULT_SETTINGS: Settings = {
   efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
   defaults: { model: 'claude-opus-5-5', effort: 'high' },
   polly: { region: 'us-east-1' },
-  bedrock: { region: 'us-east-1', models: {} },
+  bedrock: { region: 'us-east-1', scope: 'global', models: {} },
 };
 
 function isObject(v: unknown): v is Record<string, any> {
@@ -105,6 +109,7 @@ export function validateSettings(s: Settings): string | null {
   const b = s.bedrock;
   if (!isObject(b) || typeof b.region !== 'string' || !isObject(b.models)) return 'bedrock needs a region and a models map';
   if (b.profile !== undefined && typeof b.profile !== 'string') return 'bedrock.profile must be a profile name';
+  if (!BEDROCK_SCOPES.includes(b.scope)) return `bedrock.scope must be global, geo or in-region, not ${JSON.stringify(b.scope)}`;
   if (Object.values(b.models).some((v) => typeof v !== 'string')) return 'bedrock.models values must be inference profile ids';
   return null;
 }

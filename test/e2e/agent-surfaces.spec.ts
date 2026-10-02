@@ -50,7 +50,7 @@ test('settings: add, reorder and remove models, and pick the default model and e
 });
 
 test('settings: model ids not in the list are typed under Other, and Refresh list adds what Bedrock offers', async ({ page, app }) => {
-  discovery.foundationModels = async () => [{ id: 'anthropic.claude-mythos-6-v1:0', name: 'Claude Mythos 6' }];
+  discovery.foundationModels = async () => [{ id: 'anthropic.claude-mythos-6-v1:0', name: 'Claude Mythos 6', inferenceTypesSupported: ['ON_DEMAND'] }];
   await page.goto('/settings');
   const panel = page.locator('.panel.models');
   await expect(panel.getByText('built-in models. Refresh to add what Bedrock offers.')).toBeVisible();
@@ -87,12 +87,130 @@ test('settings: default agent surface, and Bedrock profile, region and discovere
   await page.getByLabel('AWS profile for Bedrock').selectOption('sandbox');
   await page.getByLabel('Region', { exact: true }).selectOption('us-west-2');
   await panel.getByRole('button', { name: 'Discover' }).click();
-  await expect(panel.getByText(/Found 3 inference profiles \(2 Anthropic Claude\); filled 2 mappings/)).toBeVisible();
+  // Routing defaults to Global; Bedrock offers only US profiles here, so both rows fall back.
+  await expect(panel.getByText(/Found 3 inference profiles \(2 Anthropic Claude\); filled 2 mappings.*2 fell back to Geographic \(about 10% more\)/)).toBeVisible();
   await expect(page.getByLabel('Inference profile for Opus 5.5', { exact: true })).toHaveValue('us.anthropic.claude-opus-5-5');
   await panel.getByRole('button', { name: 'Save Bedrock settings' }).click();
   await expect.poll(async () => (await app.json('/api/settings')).settings.bedrock).toEqual({
-    profile: 'sandbox', region: 'us-west-2', models: { 'claude-opus-5-5': 'us.anthropic.claude-opus-5-5', 'claude-fable-5-1': 'us.anthropic.claude-fable-5-1' },
+    profile: 'sandbox', region: 'us-west-2', scope: 'global', models: { 'claude-opus-5-5': 'us.anthropic.claude-opus-5-5', 'claude-fable-5-1': 'us.anthropic.claude-fable-5-1' },
   });
+});
+
+test('settings: Bedrock routing scope drives Discover, badges each mapping, is saved, and has no Global in GovCloud', async ({ page, app }) => {
+  const orig = discovery.inferenceProfiles;
+  discovery.inferenceProfiles = async () => [
+    { id: 'global.anthropic.claude-opus-5-5', arn: '', name: 'Global Opus 5.5', type: 'SYSTEM_DEFINED', anthropic: true },
+    { id: 'us.anthropic.claude-opus-5-5', arn: '', name: 'US Opus 5.5', type: 'SYSTEM_DEFINED', anthropic: true },
+    { id: 'us.anthropic.claude-fable-5-1', arn: '', name: 'US Fable 5.1', type: 'SYSTEM_DEFINED', anthropic: true },
+  ];
+  try {
+    await page.goto('/settings#models');
+    const panel = page.locator('.panel.agent-surfaces');
+    const routing = panel.getByRole('group', { name: 'Routing' });
+    const global = routing.getByRole('radio', { name: 'Global (recommended)' });
+    const geo = routing.getByRole('radio', { name: 'Geographic' });
+    const inRegion = routing.getByRole('radio', { name: 'In-region' });
+    // The radio itself is visually hidden; people click its label.
+    const pick = (name: string) => routing.getByText(name, { exact: true }).click();
+    await expect(global).toBeChecked();
+    await expect(panel.getByText('Processed in any AWS commercial region; about 10% cheaper than Geographic or In-region. Your AWS organisation must allow global requests (aws:RequestedRegion = unspecified).')).toBeVisible();
+    await pick('In-region');
+    await expect(panel.getByText('Runs only in this region; most current Claude models are not offered this way.')).toBeVisible();
+
+    // An unmapped row shows no badge.
+    const fableBadge = panel.locator('tr').filter({ has: page.getByText('claude-fable-5-1', { exact: true }) }).locator('.badge');
+    await expect(fableBadge).toBeHidden();
+
+    // Discover sends the unsaved choice.
+    await pick('Geographic');
+    await expect(panel.getByText('Stays within the geography of your region (US, EU, Japan or Australia).')).toBeVisible();
+    await panel.getByRole('button', { name: 'Discover' }).click();
+    await expect(panel.getByText(/filled 2 mappings/)).toBeVisible();
+    await expect(panel.getByText(/fell back/)).toHaveCount(0);
+    await expect(page.getByLabel('Inference profile for Opus 5.5', { exact: true })).toHaveValue('us.anthropic.claude-opus-5-5');
+    const opusBadge = panel.locator('tr').filter({ has: page.getByText('claude-opus-5-5', { exact: true }) }).locator('.badge');
+    await expect(opusBadge).toHaveText('geo');
+    await expect(opusBadge).not.toHaveClass(/warn/);
+
+    // The badge follows the row's value, and warns when it disagrees with the chosen scope.
+    await page.getByLabel('Inference profile for Opus 5.5', { exact: true }).selectOption('global.anthropic.claude-opus-5-5');
+    // The warning is in the text too, not only the colour.
+    await expect(opusBadge).toHaveText('global (differs from Routing)');
+    await expect(opusBadge).toHaveClass(/warn/);
+    await pick('Global (recommended)');
+    await expect(opusBadge).not.toHaveClass(/warn/);
+    await page.getByLabel('Inference profile for Opus 5.5', { exact: true }).selectOption({ label: 'Other…' });
+    await page.getByLabel('Inference profile for Opus 5.5, other value').fill('arn:aws:bedrock:us-east-1:000000000000:application-inference-profile/abc');
+    await expect(opusBadge).toHaveText('custom');
+    await page.getByLabel('Inference profile for Opus 5.5, other value').fill('anthropic.claude-opus-5-5');
+    await expect(opusBadge).toHaveText('in-region (differs from Routing)');
+
+    // Discover fills only empty rows, and says which mapped rows use another scope than the chosen one.
+    await pick('Geographic');
+    await panel.getByRole('button', { name: 'Discover' }).click();
+    await expect(panel.getByText(/1 row uses another scope; clear it and Discover again to re-suggest/)).toBeVisible();
+    await expect(page.getByLabel('Inference profile for Opus 5.5, other value')).toHaveValue('anthropic.claude-opus-5-5');
+    await panel.getByRole('button', { name: 'Save Bedrock settings' }).click();
+    await expect.poll(async () => (await app.json('/api/settings')).settings.bedrock.scope).toBe('geo');
+    await page.reload();
+    await expect(panel.getByRole('group', { name: 'Routing' }).getByRole('radio', { name: 'Geographic' })).toBeChecked();
+
+    // GovCloud has no global routing.
+    await pick('Global (recommended)');
+    await page.getByLabel('Region', { exact: true }).selectOption('us-gov-west-1');
+    await expect(global).toBeDisabled();
+    await expect(geo).toBeChecked();
+    await expect(panel.getByText('GovCloud has no global routing.')).toBeVisible();
+    await page.getByLabel('Region', { exact: true }).selectOption('ap-southeast-7');
+    await expect(global).toBeEnabled();
+    await expect(page.getByLabel('Region', { exact: true }).locator('option')).toHaveCount(36);
+  } finally {
+    discovery.inferenceProfiles = orig;
+  }
+});
+
+test('settings: a Discover answer for a profile, region or Routing choice changed while it was pending is discarded', async ({ page }) => {
+  const orig = discovery.inferenceProfiles;
+  let release = () => {};
+  discovery.inferenceProfiles = async () => {
+    await new Promise<void>((r) => { release = r; });
+    return [{ id: 'global.anthropic.claude-opus-5-5', arn: '', name: 'Global Opus 5.5', type: 'SYSTEM_DEFINED', anthropic: true }];
+  };
+  try {
+    await page.goto('/settings#models');
+    const panel = page.locator('.panel.agent-surfaces');
+    await expect(panel.getByRole('group', { name: 'Routing' }).getByRole('radio', { name: 'Global (recommended)' })).toBeChecked();
+    const changes: [string, () => Promise<unknown>][] = [
+      ['Routing', () => panel.getByRole('group', { name: 'Routing' }).getByText('Geographic', { exact: true }).click()],
+      ['region', () => page.getByLabel('Region', { exact: true }).selectOption('eu-west-1')],
+      ['profile', () => page.getByLabel('AWS profile for Bedrock').selectOption('sandbox')],
+    ];
+    for (const [what, change] of changes) {
+      await panel.getByRole('button', { name: 'Discover' }).click();
+      await expect(panel.getByText('Asking Bedrock…'), what).toBeVisible();
+      await change();
+      release();
+      await expect(panel.getByText(/changed.*Discover again/), what).toBeVisible();
+      await expect(page.getByLabel('Inference profile for Opus 5.5', { exact: true }), what).toHaveValue('');
+    }
+  } finally {
+    release();
+    discovery.inferenceProfiles = orig;
+  }
+});
+
+test('settings: Discover names the models left unmapped in the chosen scope and says why', async ({ page }) => {
+  const orig = discovery.foundationModels;
+  discovery.foundationModels = async () => { throw new Error('AccessDenied: bedrock:ListFoundationModels'); };
+  try {
+    await page.goto('/settings#models');
+    const panel = page.locator('.panel.agent-surfaces');
+    await panel.getByRole('group', { name: 'Routing' }).getByText('In-region', { exact: true }).click();
+    await panel.getByRole('button', { name: 'Discover' }).click();
+    await expect(panel.getByText(/No in-region option for: Opus 5\.5, Fable 5\.1\..*AccessDenied: bedrock:ListFoundationModels/)).toBeVisible();
+  } finally {
+    discovery.foundationModels = orig;
+  }
 });
 
 test('explainer: "Runs on" picks the agent surface for this explainer and persists', async ({ page, app }) => {
