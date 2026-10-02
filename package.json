@@ -1,6 +1,6 @@
 {
   "name": "rocket-explainer",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Turn any source material into an explainer (video, deck, visual, briefing doc) in a reusable, iterated style.",
   "type": "module",
   "private": true,
