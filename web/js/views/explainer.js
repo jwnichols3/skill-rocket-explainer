@@ -42,12 +42,18 @@ async function explainerView(root, { id }) {
     const jobBox = h('div');
     const job = active[0] ?? (last && last.status === 'failed' && last.createdAt > e.updatedAt ? last : null);
     if (job) {
-      const v = jobView(job.id, { onEnd: (j) => { if (j.status === 'succeeded') load(); } });
+      const v = jobView(job.id, { onEnd: (j) => { if (j.status === 'succeeded') load(); }, onRetry: retryFor(job) });
       stopJob = v.stop;
       jobBox.append(v.el);
     }
 
     const at = stepIndex(e);
+    // A failed job is retried by starting the same step again.
+    function retryFor(j) {
+      const [, step, type] = /^(source-report|plan|build|rerender)(?:-(\w+))?$/.exec(j.kind) ?? [];
+      const path = { 'source-report': 'report', plan: 'plan', build: `outputs/${type}/build`, rerender: `outputs/${type}/rerender` }[step];
+      return path ? () => act(() => api(`/api/explainers/${id}/${path}`, { method: 'POST', body: {} })) : undefined;
+    }
     page.replaceChildren(
       h('div.crumbs', h('a', { href: '/explainers', 'data-link': true }, 'Explainers'), ' / ', e.title || 'Untitled explainer'),
       h('header.page-head', h('div', h('h1', e.title || 'Untitled explainer'), h('p.muted', { style: { margin: 0 } }, e.brief)),
@@ -124,7 +130,7 @@ async function explainerView(root, { id }) {
       return api(`/api/explainers/${id}`, { method: 'PUT', body: { sources: fn(fresh.sources) } });
     };
     return h('div.panel',
-      h('div.panel-head', h('h2', 'Sources'), h('button.btn.small', { disabled: busy || !e.sources.some((s) => s.enabled), onclick: () => act(() => api(`/api/explainers/${id}/report`, { method: 'POST', body: {} })) }, e.report ? 'Re-run report' : 'Gather sources')),
+      h('div.panel-head', h('h2', 'Sources'), h('button.btn.small', { disabled: busy || (!e.sources.some((s) => s.enabled) && !e.brief), onclick: () => act(() => api(`/api/explainers/${id}/report`, { method: 'POST', body: {} })) }, e.report ? 'Re-run report' : 'Gather sources')),
       h('div', e.sources.map((s) => h('div.source-row.row', { style: { padding: '6px 0', borderBottom: '1px solid var(--border)', flexWrap: 'nowrap' } },
         h('input', { type: 'checkbox', checked: s.enabled, 'aria-label': `Use ${s.value}`, disabled: busy,
           onchange: (ev) => act(() => save((all) => all.map((x) => x.id === s.id ? { ...x, enabled: ev.target.checked } : x))) }),
@@ -156,6 +162,7 @@ async function explainerView(root, { id }) {
     const found = r.sources.filter((s) => s.found).length;
     return h('div.panel.report',
       h('div.panel-head', h('h2', 'Source report'), h('span.muted.small', `${found} of ${r.sources.length} found · ${timeAgo(r.createdAt)}`)),
+      r.sources.length ? null : h('div.callout.warn', 'No sources were attached, so there was nothing to read. Add a file, folder or link under Sources, then re-run the report.'),
       h('p.overall', r.overall),
       h('div', r.sources.map((f) => h('div.finding', { style: { padding: '10px 0', borderTop: '1px solid var(--border)' } },
         h('div.row', h('span.badge', { class: f.found ? 'ok' : 'danger' }, f.found ? 'found' : 'not found'),
