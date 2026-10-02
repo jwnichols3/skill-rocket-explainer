@@ -24,7 +24,7 @@ export async function settingsView(root) {
   // One section at a time; the tab lives in the URL hash so reloads and links land on it.
   const sections = [
     ['models', 'Models & agents', [surfaces.el, modelsPanel(settings, (models) => surfaces.setModels(models))]],
-    ['voices', 'Voices', [voiceProviders(settings, available.tts, secrets)]],
+    ['voices', 'Voices', [voiceProviders(settings, available.tts, secrets), pollyPanel(settings)]],
     ['rendering', 'Rendering', [h('div.panel', h('h2', 'Renderers'), h('p.hint', 'Which renderer makes each output type.'), h('dl.kv', TYPES.map(([type, label]) => rendererPicker(type, label))))]],
     ['about', 'About', [versionPanel()]],
   ];
@@ -99,6 +99,58 @@ function secretField(provider, name, isSet) {
     h('div.hint', 'Stored in secrets.json in your data dir, readable only by you. Never shown again after saving.'));
 }
 
+/** One AWS profile picker: '' is the default credential chain; a saved name not in ~/.aws still shows. */
+function awsProfileSelect(id, saved) {
+  const select = h('select', { id });
+  const fill = (list) => {
+    if (saved && !list.some((p) => p.name === saved)) list = [{ name: saved }, ...list];
+    select.replaceChildren(h('option', { value: '' }, '(default profile)'),
+      ...list.map((p) => h('option', { value: p.name, selected: p.name === saved }, `${p.name}${p.region ? ` · ${p.region}` : ''}${p.sso ? ' · SSO' : ''}`)));
+  };
+  fill([]);
+  api('/api/bedrock/profiles').then((r) => fill(r.profiles), (err) => toast(`AWS profiles: ${err.message}`, 'error'));
+  return select;
+}
+
+// Regions with Amazon Polly; "Other…" covers the rest.
+const POLLY_REGIONS = ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2', 'ca-central-1', 'sa-east-1',
+  'eu-central-1', 'eu-central-2', 'eu-west-1', 'eu-west-2', 'eu-west-3', 'eu-north-1', 'eu-south-2',
+  'ap-northeast-1', 'ap-northeast-2', 'ap-northeast-3', 'ap-south-1', 'ap-southeast-1', 'ap-southeast-2', 'af-south-1'];
+
+/** Polly's own AWS profile and region: independent of Bedrock's. */
+function pollyPanel(settings) {
+  const p = settings.polly;
+  const profile = awsProfileSelect('polly-profile', p.profile);
+  const region = selectWithOther({ id: 'polly-region', label: 'Polly region', options: POLLY_REGIONS.map((r) => ({ value: r })), value: p.region, placeholder: 'us-east-1' });
+  const status = h('div.hint.polly-status', 'Test makes one read-only call (DescribeVoices) with the choices above, saved or not.');
+  const choice = () => ({ region: region.value, profile: profile.value });
+  const test = h('button.btn.small', { type: 'button', async onclick() {
+    test.disabled = true;
+    status.textContent = 'Asking Polly…';
+    try {
+      const { profile: pr, region: rg } = choice();
+      const r = await api(`/api/tts/polly/check?profile=${encodeURIComponent(pr)}&region=${encodeURIComponent(rg)}`);
+      status.textContent = r.ok ? `✓ Polly answered (${r.detail}).` : `✗ ${r.detail}. Fix: ${r.fix}`;
+    } catch (err) {
+      status.textContent = '';
+      toast(err.message, 'error');
+    } finally { test.disabled = false; }
+  } }, 'Test');
+  const save = h('button.btn.small.primary', { type: 'button', async onclick() {
+    const next = await saveSettings({ polly: choice() }, 'Polly settings saved');
+    if (next) Object.assign(p, next.polly);
+  } }, 'Save Polly settings');
+  return h('div.panel.polly',
+    h('h2', 'Amazon Polly'),
+    h('p.hint', 'The AWS credentials for Polly narration, separate from the Bedrock profile under Models & agents. Pick a profile from ~/.aws/config, or leave the default to use AWS_* environment variables or the default profile.'),
+    h('div.row', { style: { alignItems: 'flex-start' } },
+      h('div.field', { style: { flex: 2 } }, h('label', { for: 'polly-profile' }, 'AWS profile for Polly'), profile),
+      h('div.field', { style: { flex: 1 } }, h('label', { for: 'polly-region' }, 'Polly region'), region.el)),
+    h('div.hint', 'Long-form voices exist only in us-east-1.'),
+    h('div.row', { style: { marginTop: '10px' } }, test, save),
+    status);
+}
+
 async function saveSettings(body, ok) {
   try {
     const r = await api('/api/settings', { method: 'PUT', body });
@@ -122,14 +174,7 @@ function agentSurfacesPanel(settings, available) {
     available.agent.map((a) => h('option', { value: a.id, selected: a.id === settings.providers.agent }, a.label)));
 
   const b = settings.bedrock;
-  const profile = h('select', { id: 'bedrock-profile' });
-  const setProfiles = (list) => {
-    if (b.profile && !list.some((p) => p.name === b.profile)) list = [{ name: b.profile }, ...list];
-    profile.replaceChildren(h('option', { value: '' }, '(default profile)'),
-      ...list.map((p) => h('option', { value: p.name, selected: p.name === b.profile }, `${p.name}${p.region ? ` · ${p.region}` : ''}${p.sso ? ' · SSO' : ''}`)));
-  };
-  setProfiles([]);
-  api('/api/bedrock/profiles').then((r) => setProfiles(r.profiles), (err) => toast(`AWS profiles: ${err.message}`, 'error'));
+  const profile = awsProfileSelect('bedrock-profile', b.profile);
   const region = selectWithOther({ id: 'bedrock-region', label: 'Region', options: BEDROCK_REGIONS.map((r) => ({ value: r })), value: b.region, placeholder: 'us-east-1' });
 
   // Until Discover runs, the choices are the saved mappings; afterwards, what Bedrock offers.
@@ -174,8 +219,9 @@ function agentSurfacesPanel(settings, available) {
     h('div.field', h('label', { for: 'default-surface' }, 'Default agent surface'), surface,
       h('div.hint', 'New explainers run here; each explainer can pick its own under Choices > Runs on.')),
     h('h3', 'Amazon Bedrock'),
+    h('p.hint', 'The AWS profile and region Claude Code uses on Bedrock. Amazon Polly narration has its own, under Voices.'),
     h('div.row', { style: { alignItems: 'flex-start' } },
-      h('div.field', { style: { flex: 2 } }, h('label', { for: 'bedrock-profile' }, 'AWS profile'), profile),
+      h('div.field', { style: { flex: 2 } }, h('label', { for: 'bedrock-profile' }, 'AWS profile for Bedrock'), profile),
       h('div.field', { style: { flex: 1 } }, h('label', { for: 'bedrock-region' }, 'Region'), region.el)),
     h('table.table', h('thead', h('tr', h('th', 'Model'), h('th', 'Inference profile'))), mapping),
     h('div.row', { style: { marginTop: '10px' } }, discover, save),

@@ -79,6 +79,10 @@ export async function saveSettings(p: Paths, patch: unknown): Promise<Settings> 
 }
 
 /** Checks the model list, defaults and Bedrock block of a merged settings object; returns an error message or null. */
+/** Shapes of AWS region and profile names, for settings and query parameters. */
+export const AWS_REGION = /^[a-z]{2}(-[a-z]+)+-\d+$/;
+export const AWS_PROFILE = /^[\w.+@-]+$/;
+
 export function validateSettings(s: Settings): string | null {
   // No auth: the app must only ever listen on loopback (a reverse proxy reaches it from there).
   if (!['127.0.0.1', 'localhost', '::1'].includes(s.host)) return `host must be a loopback address (127.0.0.1, localhost or ::1), not "${s.host}"`;
@@ -95,6 +99,9 @@ export function validateSettings(s: Settings): string | null {
   if (!Array.isArray(s.efforts) || !s.efforts.length || s.efforts.some((e) => typeof e !== 'string' || !e)) return 'efforts must be a non-empty list of names';
   if (!ids.has(s.defaults.model)) return `the default model "${s.defaults.model}" is not in the model list`;
   if (!s.efforts.includes(s.defaults.effort)) return `the default effort "${s.defaults.effort}" is not one of ${s.efforts.join(', ')}`;
+  const pl = s.polly;
+  if (!isObject(pl) || typeof pl.region !== 'string' || !AWS_REGION.test(pl.region)) return `polly.region must be an AWS region, not ${JSON.stringify(pl?.region)}`;
+  if (pl.profile !== undefined && (typeof pl.profile !== 'string' || (pl.profile && !AWS_PROFILE.test(pl.profile)))) return `polly.profile must be an AWS profile name, not ${JSON.stringify(pl.profile)}`;
   const b = s.bedrock;
   if (!isObject(b) || typeof b.region !== 'string' || !isObject(b.models)) return 'bedrock needs a region and a models map';
   if (b.profile !== undefined && typeof b.profile !== 'string') return 'bedrock.profile must be a profile name';

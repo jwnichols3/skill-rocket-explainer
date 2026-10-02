@@ -49,9 +49,9 @@ Later: `explainer open` reopens the app, `explainer stop` stops it, `explainer d
 ## Requirements
 
 - macOS or Linux, Node.js 24+ (with npm), ffmpeg.
-- **Claude Code**, signed in with a Claude subscription, or using **Amazon Bedrock** through an AWS profile. Each explainer can choose which; the Bedrock one discovers your inference profiles.
+- **Claude Code**, signed in with a Claude subscription, or using **Amazon Bedrock** through an AWS profile. Each explainer can choose which. Bedrock's AWS profile and region are in Settings > Models & agents, which also discovers your inference profiles.
 - **A voice**, one of:
-  - **Amazon Polly** (the default): needs AWS credentials.
+  - **Amazon Polly** (the default): needs AWS credentials. Pick its AWS profile and region in Settings > Voices > Amazon Polly and press **Test**. They are separate from Bedrock's, so the two can use different accounts.
   - **Kokoro**: free and local, works offline after a one-time install ([below](#offline-narration-kokoro)).
   - **ElevenLabs**: paste an API key in Settings > Voices.
 - Chromium for deck, doc and visual exports: Playwright's (`npx playwright install chromium`), or your installed Google Chrome.

@@ -12,7 +12,8 @@ import { runChecks, formatChecks } from '../src/doctor.ts';
 const HELP = `explainer - Rocket Explainer local app
 
 usage:
-  explainer setup [--yes] [--port N] [--public-url URL] [--agent ID] [--aws-profile P] [--tts ID] [--video-renderer ID]
+  explainer setup [--yes] [--port N] [--public-url URL] [--agent ID] [--tts ID] [--video-renderer ID]
+                               [--polly-profile P] [--polly-region R] [--bedrock-profile P] [--aws-profile P (both)]
                                first-run setup (safe to re-run); --yes skips the web Setup page
   explainer start [--port N]   start the app (no-op if already running)
   explainer stop               stop the app
@@ -74,8 +75,13 @@ async function setup() {
   if (flag('--tts')) providers.tts = flag('--tts');
   if (flag('--video-renderer')) providers.renderer = { video: flag('--video-renderer') };
   if (Object.keys(providers).length) patch.providers = providers;
-  const profile = flag('--aws-profile');
-  if (profile) { patch.polly = { profile }; patch.bedrock = { profile }; }
+  // Polly and Bedrock have separate AWS settings; --aws-profile sets both profiles at once.
+  const both = flag('--aws-profile');
+  const pollyProfile = flag('--polly-profile') ?? both;
+  const polly = { ...(pollyProfile ? { profile: pollyProfile } : {}), ...(flag('--polly-region') ? { region: flag('--polly-region') } : {}) };
+  const bedrock = flag('--bedrock-profile') ?? both;
+  if (Object.keys(polly).length) patch.polly = polly;
+  if (bedrock) patch.bedrock = { profile: bedrock };
   if (process.argv.includes('--yes')) patch.setupComplete = true;
   const settings = await saveSettings(p, patch);
 

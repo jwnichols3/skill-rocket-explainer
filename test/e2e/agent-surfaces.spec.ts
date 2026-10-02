@@ -83,8 +83,8 @@ test('settings: default agent surface, and Bedrock profile, region and discovere
   await expect.poll(async () => (await app.json('/api/settings')).settings.providers.agent).toBe('claude-bedrock');
 
   const panel = page.locator('.panel.agent-surfaces');
-  await expect(page.getByLabel('AWS profile').locator('option')).toHaveText(['(default profile)', 'default · us-east-1', 'sandbox · us-west-2 · SSO']);
-  await page.getByLabel('AWS profile').selectOption('sandbox');
+  await expect(page.getByLabel('AWS profile for Bedrock').locator('option')).toHaveText(['(default profile)', 'default · us-east-1', 'sandbox · us-west-2 · SSO']);
+  await page.getByLabel('AWS profile for Bedrock').selectOption('sandbox');
   await page.getByLabel('Region', { exact: true }).selectOption('us-west-2');
   await panel.getByRole('button', { name: 'Discover' }).click();
   await expect(panel.getByText(/Found 3 inference profiles \(2 Anthropic Claude\); filled 2 mappings/)).toBeVisible();

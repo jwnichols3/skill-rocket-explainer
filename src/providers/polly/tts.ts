@@ -29,8 +29,8 @@ export function client(cfg: PollySettings): PollyClient {
 /** How to fix missing/expired credentials, naming the configured profile. */
 export function credentialsFix(cfg: PollySettings): string {
   return cfg.profile
-    ? `run \`aws sso login --profile ${cfg.profile}\` (or refresh that profile's keys); the profile is set in settings under polly.profile`
-    : 'configure AWS credentials (`aws configure`, `aws sso login`, or AWS_* env vars), or set polly.profile in settings';
+    ? `run \`aws sso login --profile ${cfg.profile}\` (or refresh that profile's keys); change the profile in Settings > Voices > Amazon Polly`
+    : 'configure AWS credentials (`aws configure`, `aws sso login`, or AWS_* env vars), or pick a profile in Settings > Voices > Amazon Polly';
 }
 
 /** Voice ids are "<Name>:<engine>", one per engine the voice supports. */
